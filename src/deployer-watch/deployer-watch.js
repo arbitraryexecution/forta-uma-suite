@@ -10,8 +10,7 @@ const deployerAddress = Object.keys(whitelist)[0];
 const handleTransaction = async (txEvent) => {
   const findings = [];
   const txAddresses = txEvent.addresses;
-  const { to } = txEvent;
-  const { from } = txEvent;
+  const { to, from } = txEvent;
 
   if (txAddresses[deployerAddress]) {
     // low severity alert if the Deployer was involved

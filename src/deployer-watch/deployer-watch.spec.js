@@ -4,6 +4,7 @@ const {
   FindingSeverity,
   Finding,
 } = require('forta-agent');
+
 const config = require('../../agent-config.json');
 const { handleTransaction } = require('./deployer-watch');
 
@@ -18,6 +19,7 @@ function createTxEvent(transaction) {
 
   return new TransactionEvent(null, null, transaction, null, [], addresses, null);
 }
+
 describe('watch deployer EOA', () => {
   describe('handleTransaction', () => {
     it('returns empty findings if Deployer not involved', async () => {
