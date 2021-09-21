@@ -51,10 +51,7 @@ async function handleBlock(blockEvent) {
   const findings = [];
 
   // get the current block number
-  //const params = [ '0x' + (blockEvent.blockNumber).toString(16) ];
-  //const blockNumber = 11942721;
-  const blockNumber = 13266236;
-  const params = [ '0x' + blockNumber.toString(16) ];
+  const params = [ '0x' + (blockEvent.blockNumber).toString(16) ];
 
   // get all of the traces for the current block
   // reference: https://docs.alchemy.com/alchemy/documentation/enhanced-apis/trace-api#trace_block
