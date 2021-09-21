@@ -3,14 +3,26 @@ const { Finding, FindingSeverity, FindingType } = require('forta-agent');
 const addressList = require('./deployer-watch.json');
 const config = require('../../agent-config.json');
 
+let deployerAddress;
 const whitelist = {};
-(Object.keys(addressList)).forEach((a) => { whitelist[a.toLowerCase()] = true; });
-const deployerAddress = Object.keys(whitelist)[0];
+(Object.keys(addressList)).forEach((a) => {
+  if (addressList[a] === 'Deployer') {
+    deployerAddress = a.toLowerCase();
+  }
+  whitelist[a.toLowerCase()] = true;
+});
 
 const handleTransaction = async (txEvent) => {
   const findings = [];
   const txAddresses = txEvent.addresses;
   const { to, from } = txEvent;
+
+  // the Deployer address is critical to this agent, so it should be in deployer-watch.json
+  // in case it gets removed, check and warn
+  if (!deployerAddress) {
+    console.error('Please add Deployer contract address to deployer-watch.json');
+    return findings;
+  }
 
   if (txAddresses[deployerAddress]) {
     // low severity alert if the Deployer was involved

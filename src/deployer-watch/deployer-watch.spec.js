@@ -9,6 +9,7 @@ const config = require('../../agent-config.json');
 const { handleTransaction } = require('./deployer-watch');
 
 // see deployer-watch.json for full whitelist
+// and contract-addresses.json for latest Deployer address
 const deployerAddress = '0x2bAaA41d155ad8a4126184950B31F50A1513cE25'.toLowerCase();
 const whitelistedAddress = '0x592349F7DeDB2b75f9d4F194d4b7C16D82E507Dc'.toLowerCase();
 
