@@ -18,6 +18,7 @@ function getEvents(contractName) {
 
 // prune contract names that don't have any associated events
 contractNames = contractNames.filter((name) => (getEvents(name).length !== 0));
+console.log("DEBUG: contractNames=" + contractNames);
 
 async function handleTransaction(txEvent) {
   const findings = [];
@@ -30,15 +31,19 @@ async function handleTransaction(txEvent) {
     const events = getEvents(contractName);
 
     // for each contract address, check for event matches
-    events.forEach((eventName) => {
+    events.forEach((event) => {
+      var eventName = event["name"];
+      var eventType = event["type"];
+      var eventSeverity = event["severity"];
+
       // console.log("DEBUG: contract=" + contractAddress + ", event=" + eventName);
       const eventLog = txEvent.filterEvent(eventName, contractAddress);
       if (eventLog.length !== 0) {
         findings.push(
           Finding.fromObject({
-            name: 'Aave Admin Event',
+            name: 'UMA Admin Event',
             description: `The ${eventName} event was emitted by the ${contractName} contract`,
-            alertId: 'AE-AAVE-ADMIN-EVENT',
+            alertId: 'AE-UMA-ADMIN-EVENT',
             type: FindingType.Suspicious,
             severity: FindingSeverity.Low,
             metadata: {
@@ -47,7 +52,7 @@ async function handleTransaction(txEvent) {
               contractAddress,
               eventName,
             },
-            everestId: '0xa3d1fd85c0b62fa8bab6b818ffc96b5ec57602b6',
+            everestId: '0x9ed51155fa709f1bc3b26b8fec03df7010177362',
           }),
         );
       }

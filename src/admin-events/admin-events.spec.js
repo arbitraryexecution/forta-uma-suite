@@ -102,9 +102,9 @@ describe('admin event monitoring', () => {
       // assertions
       expect(findings).toStrictEqual([
         Finding.fromObject({
-          name: 'Aave Admin Event',
+          name: 'UMA Admin Event',
           description: `The ${eventName} event was emitted by the ${contractName} contract`,
-          alertId: 'AE-AAVE-ADMIN-EVENT',
+          alertId: 'AE-UMA-ADMIN-EVENT',
           type: FindingType.Suspicious,
           severity: FindingSeverity.Low,
           metadata: {
@@ -113,7 +113,7 @@ describe('admin event monitoring', () => {
             contractAddress,
             eventName,
           },
-          everestId: '0xa3d1fd85c0b62fa8bab6b818ffc96b5ec57602b6',
+          everestId: '0x9ed51155fa709f1bc3b26b8fec03df7010177362',
         }),
       ]);
     });
