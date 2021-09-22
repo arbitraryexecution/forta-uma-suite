@@ -1,7 +1,7 @@
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
 
-const Addresses = require('./deployer-watch.json');
-const config = require('../../agent-config.json');
+const Addresses = require('./config/deployer-watch.json');
+const config = require('../agent-config.json');
 
 const deployerAddress = Addresses.Deployer.toLowerCase();
 const whitelist = {};
