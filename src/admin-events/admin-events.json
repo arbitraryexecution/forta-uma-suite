@@ -1,0 +1,18 @@
+{
+  "Voting" : [
+    "OwnershipTransferred()",
+    "EncryptedVote()",
+    "PriceRequestAdded()",
+    "PriceResolved()",
+    "RewardsRetrieved()",
+    "VoteCommitted()",
+    "VoteRevealed()"
+    ],
+  "Govenor" : [
+    "NewProposal()",
+    "ProposalExecuted()",
+    "AddedSharedMember()",
+    "RemovedSharedMember()",
+    "ResetExclusiveMember()"
+    ]
+  }
