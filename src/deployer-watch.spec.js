@@ -5,19 +5,19 @@ const {
   Finding,
 } = require('forta-agent');
 
-const Addresses = require('./config/deployer-watch.json');
+const addresses = require('./config/deployer-watch.json');
 const config = require('../agent-config.json');
 const { handleTransaction } = require('./deployer-watch');
 
-const deployerAddress = Addresses.Deployer.toLowerCase();
-const whitelistedAddress = Addresses.Whitelist[0].toLowerCase();
+const deployerAddress = addresses.Deployer.toLowerCase();
+const whitelistedAddress = addresses.Whitelist[0].toLowerCase();
 
 function createTxEvent(transaction) {
-  const addresses = {};
-  addresses[transaction.to] = true;
-  addresses[transaction.from] = true;
+  const txAddresses = {};
+  txAddresses[transaction.to] = true;
+  txAddresses[transaction.from] = true;
 
-  return new TransactionEvent(null, null, transaction, null, [], addresses, null);
+  return new TransactionEvent(null, null, transaction, null, [], txAddresses, null);
 }
 
 describe('watch deployer EOA', () => {
@@ -44,7 +44,7 @@ describe('watch deployer EOA', () => {
       const findings = await handleTransaction(txEvent);
       expect(findings).toStrictEqual([
         Finding.fromObject({
-          name: 'UMA Deployer Watch - Unexpected Transaction',
+          name: 'UMA Deployer Watch',
           description: 'UMA Deployer EOA involved in transaction',
           alertId: 'AE-UMA-DEPLOYER-TX',
           severity: FindingSeverity.Low,
@@ -58,7 +58,7 @@ describe('watch deployer EOA', () => {
       ]);
     });
 
-    it('Two findings if Deployer interacts with non-whitelist address', async () => {
+    it('returns 2 findings if Deployer interacts with non-whitelist address', async () => {
       const txEvent = createTxEvent({
         from: deployerAddress,
         to: '0xFAKEADDRESS',
@@ -67,7 +67,7 @@ describe('watch deployer EOA', () => {
       const findings = await handleTransaction(txEvent);
       expect(findings).toStrictEqual([
         Finding.fromObject({
-          name: 'UMA Deployer Watch - Unexpected Transaction',
+          name: 'UMA Deployer Watch',
           description: 'UMA Deployer EOA involved in transaction',
           alertId: 'AE-UMA-DEPLOYER-TX',
           severity: FindingSeverity.Low,
@@ -80,8 +80,8 @@ describe('watch deployer EOA', () => {
         }),
 
         Finding.fromObject({
-          name: 'UMA Deployer Watch - Unexpected Interaction',
-          description: 'UMA Deployer interacting with non-whitelist address',
+          name: 'UMA Deployer Watch - Unexpected Transaction',
+          description: 'UMA Deployer transaction with non-whitelist address',
           alertId: 'AE-UMA-DEPLOYER-WHITELIST',
           severity: FindingSeverity.High,
           type: FindingType.Suspicious,

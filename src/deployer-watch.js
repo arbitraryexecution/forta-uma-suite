@@ -1,14 +1,14 @@
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
 
-const Addresses = require('./config/deployer-watch.json');
+const addresses = require('./config/deployer-watch.json');
 const config = require('../agent-config.json');
 
-const deployerAddress = Addresses.Deployer.toLowerCase();
+const deployerAddress = addresses.Deployer.toLowerCase();
 const whitelist = {};
 
 // re-format the whitelist to simplify the logic for checking transactions
 // also remove checksums
-Addresses.Whitelist.forEach((a) => {
+addresses.Whitelist.forEach((a) => {
   whitelist[a.toLowerCase()] = true;
 });
 
@@ -28,7 +28,7 @@ const handleTransaction = async (txEvent) => {
     // low severity alert if the Deployer was involved
     findings.push(
       Finding.fromObject({
-        name: 'UMA Deployer Watch - Unexpected Transaction',
+        name: 'UMA Deployer Watch',
         description: 'UMA Deployer EOA involved in transaction',
         alertId: 'AE-UMA-DEPLOYER-TX',
         severity: FindingSeverity.Low,
@@ -45,8 +45,8 @@ const handleTransaction = async (txEvent) => {
     if (!whitelist[to]) {
       findings.push(
         Finding.fromObject({
-          name: 'UMA Deployer Watch - Unexpected Interaction',
-          description: 'UMA Deployer interacting with non-whitelist address',
+          name: 'UMA Deployer Watch - Unexpected Transaction',
+          description: 'UMA Deployer transaction with non-whitelist address',
           alertId: 'AE-UMA-DEPLOYER-WHITELIST',
           severity: FindingSeverity.High,
           type: FindingType.Suspicious,
