@@ -1,3 +1,6 @@
 {
+  "optimisticOracle": {
+    "priceThresholdPct" : 3
+  },
   "umaEverestId": "0x9ed51155fa709f1bc3b26b8fec03df7010177362"
 }
