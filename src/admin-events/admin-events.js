@@ -1,4 +1,5 @@
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
+const ethers = require('ethers');
 
 // load config files
 const contractAddresses = require('../../contract-addresses.json');
@@ -9,16 +10,30 @@ let contractNames = Object.keys(contractAddresses);
 
 // returns the list of events for a given contract
 function getEvents(contractName) {
-  const events = adminEvents[contractName];
-  if (events === undefined) {
+  const data = adminEvents[contractName];
+  if (data === undefined) {
     return []; // no events for this contract
   }
-  return events;
+  return data["events"];
 }
 
 // prune contract names that don't have any associated events
 contractNames = contractNames.filter((name) => (getEvents(name).length !== 0));
-console.log("DEBUG: contractNames=" + contractNames);
+
+// Create the interfaces for each contract that has events we wish to monitor
+var ifaces = {};
+contractNames.forEach((contractName) => {
+
+  // Get the abi for the contract
+  const abiPath = adminEvents[contractName]["abi"];
+  const { result } = require(abiPath);
+
+  // create ethers interface object
+  const iface = new ethers.utils.Interface(result);
+
+  // Create an association between the contract name and the interface
+  ifaces[contractName] = iface;
+});
 
 async function handleTransaction(txEvent) {
   const findings = [];
@@ -36,7 +51,7 @@ async function handleTransaction(txEvent) {
       var eventType = event["type"];
       var eventSeverity = event["severity"];
 
-      // console.log("DEBUG: contract=" + contractAddress + ", event=" + eventName);
+      // console.log("DEBUG: contract=" + contractAddress + ", event=" + eventName, " type=" + eventType + " severity=" + eventSeverity);
       const eventLog = txEvent.filterEvent(eventName, contractAddress);
       if (eventLog.length !== 0) {
         findings.push(

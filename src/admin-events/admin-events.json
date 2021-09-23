@@ -1,5 +1,6 @@
 {
-  "Voting" : [
+  "Voting" : {
+    "events" : [
     {"name" : "OwnershipTransferred", "type" : "Suspicious", "severity" : "High"},
     {"name" : "PriceRequestAdded", "type" : "Unknown", "severity" : "Low"},
     {"name" : "PriceResolved", "type" : "Unknown", "severity" : "Low"},
@@ -7,11 +8,16 @@
     {"name" : "VoteCommitted", "type" : "Unknown", "severity" : "Low"},
     {"name" : "VoteRevealed", "type" : "Unknown", "severity" : "Low"}
     ],
-  "Governor" : [
+    "abi" : "../../abi/Voting.json"
+  },
+  "Governor" : {
+    "events" : [
     {"name" : "NewProposal", "type" : "Unknown", "severity" : "Low"},
     {"name" : "ProposalExecuted", "type" : "Unknown", "severity" : "Low"},
     {"name" : "AddedSharedMember", "type" : "Unknown", "severity" : "Low"},
     {"name" : "RemovedSharedMember", "type" : "Unknown", "severity" : "Low"},
     {"name" : "ResetExclusiveMember", "type" : "Suspicious", "severity" : "High"}
-    ]
+    ],
+    "abi" : "../../abi/Governor.json"
   }
+}
