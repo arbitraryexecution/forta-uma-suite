@@ -44,8 +44,8 @@ async function handleTransaction(txEvent) {
             name: 'UMA Admin Event',
             description: `The ${eventName} event was emitted by the ${contractName} contract`,
             alertId: 'AE-UMA-ADMIN-EVENT',
-            type: FindingType.Suspicious,
-            severity: FindingSeverity.Low,
+            type: FindingType[eventType],
+            severity: FindingSeverity[eventSeverity],
             metadata: {
               hash,
               contractName,
