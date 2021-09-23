@@ -1,4 +1,5 @@
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
+const { getAbi, getBytecode, getAddress } = require("@uma/contracts-node")
 const ethers = require('ethers');
 
 // load config files
@@ -25,11 +26,10 @@ var ifaces = {};
 contractNames.forEach((contractName) => {
 
   // Get the abi for the contract
-  const abiPath = adminEvents[contractName]["abi"];
-  const { result } = require(abiPath);
+  const abi = getAbi(contractName);
 
   // create ethers interface object
-  const iface = new ethers.utils.Interface(result);
+  const iface = new ethers.utils.Interface(abi);
 
   // Create an association between the contract name and the interface
   ifaces[contractName] = iface;

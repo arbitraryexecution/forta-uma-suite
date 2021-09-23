@@ -8,7 +8,7 @@
     {"name" : "VoteCommitted", "type" : "Unknown", "severity" : "Low"},
     {"name" : "VoteRevealed", "type" : "Unknown", "severity" : "Low"}
     ],
-    "abi" : "../../abi/Voting.json"
+    "abi" : "Voting"
   },
   "Governor" : {
     "events" : [
@@ -18,6 +18,6 @@
     {"name" : "RemovedSharedMember", "type" : "Unknown", "severity" : "Low"},
     {"name" : "ResetExclusiveMember", "type" : "Suspicious", "severity" : "High"}
     ],
-    "abi" : "../../abi/Governor.json"
+    "abi" : "Governor"
   }
 }
