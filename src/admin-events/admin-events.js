@@ -11,11 +11,11 @@ let contractNames = Object.keys(contractAddresses);
 
 // returns the list of events for a given contract
 function getEvents(contractName) {
-  const data = adminEvents[contractName];
-  if (data === undefined) {
+  const events = adminEvents[contractName];
+  if (events === undefined) {
     return []; // no events for this contract
   }
-  return data["events"];
+  return events;
 }
 
 // prune contract names that don't have any associated events
@@ -50,6 +50,7 @@ async function handleTransaction(txEvent) {
       var eventName = event["name"];
       var eventType = event["type"];
       var eventSeverity = event["severity"];
+      var iface = ifaces[contractName];
 
       // console.log("DEBUG: contract=" + contractAddress + ", event=" + eventName, " type=" + eventType + " severity=" + eventSeverity);
       const eventLog = txEvent.filterEvent(eventName, contractAddress);

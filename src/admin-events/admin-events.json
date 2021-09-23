@@ -1,23 +1,17 @@
 {
-  "Voting" : {
-    "events" : [
+  "Voting" : [
     {"name" : "OwnershipTransferred", "type" : "Suspicious", "severity" : "High"},
     {"name" : "PriceRequestAdded", "type" : "Unknown", "severity" : "Low"},
     {"name" : "PriceResolved", "type" : "Unknown", "severity" : "Low"},
     {"name" : "RewardsRetrieved", "type" : "Unknown", "severity" : "Low"},
     {"name" : "VoteCommitted", "type" : "Unknown", "severity" : "Low"},
     {"name" : "VoteRevealed", "type" : "Unknown", "severity" : "Low"}
-    ],
-    "abi" : "Voting"
-  },
-  "Governor" : {
-    "events" : [
+  ],
+  "Governor" : [
     {"name" : "NewProposal", "type" : "Unknown", "severity" : "Low"},
     {"name" : "ProposalExecuted", "type" : "Unknown", "severity" : "Low"},
     {"name" : "AddedSharedMember", "type" : "Unknown", "severity" : "Low"},
     {"name" : "RemovedSharedMember", "type" : "Unknown", "severity" : "Low"},
     {"name" : "ResetExclusiveMember", "type" : "Suspicious", "severity" : "High"}
-    ],
-    "abi" : "Governor"
-  }
+  ]
 }
