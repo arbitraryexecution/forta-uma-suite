@@ -3,6 +3,7 @@ const { getAbi, getBytecode, getAddress } = require("@uma/contracts-node")
 const ethers = require('ethers');
 
 // load config files
+const config = require('../../agent-config.json');
 const contractAddresses = require('../../contract-addresses.json');
 const adminEvents = require('./admin-events.json');
 
@@ -39,7 +40,7 @@ function createAlert(log, contractName, eventType, eventSeverity) {
     alertId: 'AE-UMA-ADMIN-EVENT',
     type: FindingType[eventType],
     severity: FindingSeverity[eventSeverity],
-    everestId: '0x9ed51155fa709f1bc3b26b8fec03df7010177362',
+    everestId: config.umaEverestId,
     metadata: JSON.stringify(log),
   });
 }

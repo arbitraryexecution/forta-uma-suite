@@ -1,5 +1,8 @@
 const ethers = require('ethers');
 
+// Load Config files
+const config = require('../../agent-config.json');
+
 const {
   TransactionEvent,
   FindingType,
@@ -113,7 +116,7 @@ describe('admin event monitoring', () => {
             contractAddress,
             eventName,
           },
-          everestId: '0x9ed51155fa709f1bc3b26b8fec03df7010177362',
+          everestId: config.umaEverestId,
         }),
       ]);
     });
