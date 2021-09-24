@@ -1,4 +1,5 @@
 const ethers = require('ethers');
+const { getAbi, getAddress } = require('@uma/contracts-node');
 const { createTransactionEvent } = require('forta-agent');
 
 // override the timeout from the agent configuration JSON file before the handler is imported
@@ -8,14 +9,13 @@ jest.mock('../agent-config.json', () => ({
 
 const { handleTransaction, createAlert } = require('./monitor-mint-calls');
 
-// load required contract addresses
-const {
-  VotingToken: votingTokenAddress,
-  Voting: votingAddress,
-} = require('../contract-addresses.json');
+// get the addresses for the voting contract and voting token contract for chain id 1 (eth mainnet)
+const chainId = 1;
+const votingAddressPromise = getAddress("Voting", chainId);
+const votingTokenAddressPromise = getAddress("VotingToken", chainId);
 
-// get the abi for the VotingToken contract
-const { abi: votingTokenAbi } = require('../abi/VotingToken.json');
+// get the abi for the voting token contract
+const votingTokenAbi = getAbi("VotingToken");
 
 // create interface
 const votingTokenInterface = new ethers.utils.Interface(votingTokenAbi);
@@ -44,6 +44,10 @@ describe('UMA Token mint() call agent', () => {
 
       // create a fake transaction hash
       const mockTransactionHash = '0xFAKETRANSACTIONHASH';
+
+      // get the addresses from the fulfilled promises
+      const votingTokenAddress = await votingTokenAddressPromise;
+      const votingAddress = await votingAddressPromise;
 
       // load all of the relevant values into the mocked trace data object
       const mockTraces = [
@@ -81,6 +85,10 @@ describe('UMA Token mint() call agent', () => {
       // create a fake transaction hash
       const mockTransactionHash = '0xFAKETRANSACTIONHASH';
 
+      // get the addresses from the fulfilled promises
+      const votingTokenAddress = await votingTokenAddressPromise;
+      const votingAddress = await votingAddressPromise;
+
       // load all of the relevant values into the mocked trace data
       const mockTraces = [
         {
@@ -100,7 +108,11 @@ describe('UMA Token mint() call agent', () => {
       const findings = await handleTransaction(txEvent);
 
       // create the expected finding from our test parameters
-      const expectedFinding = createAlert(disallowedContract.toLowerCase(), mockTransactionHash);
+      const expectedFinding = createAlert(
+        disallowedContract.toLowerCase(),
+        votingTokenAddress,
+        mockTransactionHash
+      );
 
       expect(findings).toStrictEqual([expectedFinding]);
     });
