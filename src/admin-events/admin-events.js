@@ -18,6 +18,31 @@ function getEvents(contractName) {
   return events;
 }
 
+function filterAndParseLogs(logs, address, iface, eventNames) {
+  // collect logs only from the contract
+  const contractLogs = logs.filter((log) => log.address === address);
+
+  // decode logs and filter on the ones we are interested in
+  const parse = (log) => iface.parseLog(log);
+  const filter = (log) => eventNames.indexOf(log.name) !== -1;
+  const parsedLogs = contractLogs.map(parse).filter(filter);
+
+  return parsedLogs;
+}
+
+// helper function to create alerts
+function createAlert(log, eventName, contractName, eventType, eventSeverity) {
+  return Finding.fromObject({
+    name: 'UMA Admin Event',
+    description: `The ${eventName} event was emitted by the ${contractName} contract`,
+    alertId: 'AE-UMA-ADMIN-EVENT',
+    type: FindingType[eventType],
+    severity: FindingSeverity[eventSeverity],
+    everestId: '0x9ed51155fa709f1bc3b26b8fec03df7010177362',
+    metadata: JSON.stringify(log),
+  });
+}
+
 // prune contract names that don't have any associated events
 contractNames = contractNames.filter((name) => (getEvents(name).length !== 0));
 
@@ -41,37 +66,31 @@ async function handleTransaction(txEvent) {
 
   // iterate over each contract name to get the address and events
   contractNames.forEach((contractName) => {
-    // for each contract name, lookup the address
+
+    // for each contract name, lookup the address, events and interface
     const contractAddress = contractAddresses[contractName].toLowerCase();
     const events = getEvents(contractName);
+    const eventNames = events.map(element => element["name"]);
+    var iface = ifaces[contractName];
 
-    // for each contract address, check for event matches
-    events.forEach((event) => {
-      var eventName = event["name"];
-      var eventType = event["type"];
-      var eventSeverity = event["severity"];
-      var iface = ifaces[contractName];
+    const parsedLogs = filterAndParseLogs(txEvent.logs, contractAddress, iface, eventNames);
 
-      // console.log("DEBUG: contract=" + contractAddress + ", event=" + eventName, " type=" + eventType + " severity=" + eventSeverity);
-      const eventLog = txEvent.filterEvent(eventName, contractAddress);
-      if (eventLog.length !== 0) {
-        findings.push(
-          Finding.fromObject({
-            name: 'UMA Admin Event',
-            description: `The ${eventName} event was emitted by the ${contractName} contract`,
-            alertId: 'AE-UMA-ADMIN-EVENT',
-            type: FindingType[eventType],
-            severity: FindingSeverity[eventSeverity],
-            metadata: {
-              hash,
-              contractName,
-              contractAddress,
-              eventName,
-            },
-            everestId: '0x9ed51155fa709f1bc3b26b8fec03df7010177362',
-          }),
-        );
-      }
+    // loop over each eventLog
+    parsedLogs.forEach((log) => {
+      const event = events.filter((event) => event["name"] === log.name)[0];
+      const eventType = event["type"];
+      const eventSeverity = event["severity"];
+      findings.push(createAlert(log, log.name, contractName, eventType, eventSeverity));
+
+      console.log("-----------------------------------------------")
+      console.log("contractName: " + contractName);
+      console.log("contractAddress: " + contractAddress);
+      console.log("eventNames: " + eventNames);
+      console.log("txEvent.logs.length: " + txEvent.logs.length);
+      console.log("Event: " + JSON.stringify(log.name));
+      console.log("type: " + JSON.stringify(eventType));
+      console.log("severity: " + JSON.stringify(eventSeverity));
+
     });
   });
 
