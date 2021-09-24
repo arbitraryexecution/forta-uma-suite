@@ -11,11 +11,11 @@ const { handleTransaction, createAlert } = require('./monitor-mint-calls');
 
 // get the addresses for the voting contract and voting token contract for chain id 1 (eth mainnet)
 const chainId = 1;
-const votingAddressPromise = getAddress("Voting", chainId);
-const votingTokenAddressPromise = getAddress("VotingToken", chainId);
+const votingAddressPromise = getAddress('Voting', chainId);
+const votingTokenAddressPromise = getAddress('VotingToken', chainId);
 
 // get the abi for the voting token contract
-const votingTokenAbi = getAbi("VotingToken");
+const votingTokenAbi = getAbi('VotingToken');
 
 // create interface
 const votingTokenInterface = new ethers.utils.Interface(votingTokenAbi);
@@ -85,9 +85,8 @@ describe('UMA Token mint() call agent', () => {
       // create a fake transaction hash
       const mockTransactionHash = '0xFAKETRANSACTIONHASH';
 
-      // get the addresses from the fulfilled promises
+      // get the address from the fulfilled promises
       const votingTokenAddress = await votingTokenAddressPromise;
-      const votingAddress = await votingAddressPromise;
 
       // load all of the relevant values into the mocked trace data
       const mockTraces = [
@@ -111,7 +110,7 @@ describe('UMA Token mint() call agent', () => {
       const expectedFinding = createAlert(
         disallowedContract.toLowerCase(),
         votingTokenAddress,
-        mockTransactionHash
+        mockTransactionHash,
       );
 
       expect(findings).toStrictEqual([expectedFinding]);
