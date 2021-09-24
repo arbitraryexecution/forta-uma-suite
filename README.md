@@ -6,6 +6,7 @@ This agent monitors various aspects of UMA. The UMA suite currently contains
 the following handlers:
 
 - deployer-watch
+- monitor-mint-calls
 
 ## Supported Chains
 
