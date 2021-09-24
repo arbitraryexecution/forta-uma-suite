@@ -18,6 +18,7 @@ function getEvents(contractName) {
   return events;
 }
 
+// Filters the logs to only events in eventNames
 function filterAndParseLogs(logs, address, iface, eventNames) {
   // collect logs only from the contract
   const contractLogs = logs.filter((log) => log.address === address);
@@ -73,23 +74,19 @@ async function handleTransaction(txEvent) {
     const eventNames = events.map(element => element["name"]);
     var iface = ifaces[contractName];
 
+    // Filter down to only the event we want to alert on
     const parsedLogs = filterAndParseLogs(txEvent.logs, contractAddress, iface, eventNames);
 
-    // loop over each eventLog
+    // Alert on each event in parsedLogs
     parsedLogs.forEach((log) => {
+
+      // Get the event type and severity
       const event = events.filter((event) => event["name"] === log.name)[0];
       const eventType = event["type"];
       const eventSeverity = event["severity"];
-      findings.push(createAlert(log, log.name, contractName, eventType, eventSeverity));
 
-      console.log("-----------------------------------------------")
-      console.log("contractName: " + contractName);
-      console.log("contractAddress: " + contractAddress);
-      console.log("eventNames: " + eventNames);
-      console.log("txEvent.logs.length: " + txEvent.logs.length);
-      console.log("Event: " + JSON.stringify(log.name));
-      console.log("type: " + JSON.stringify(eventType));
-      console.log("severity: " + JSON.stringify(eventSeverity));
+      // Create the alert
+      findings.push(createAlert(log, log.name, contractName, eventType, eventSeverity));
 
     });
   });
