@@ -32,10 +32,10 @@ function filterAndParseLogs(logs, address, iface, eventNames) {
 }
 
 // helper function to create alerts
-function createAlert(log, eventName, contractName, eventType, eventSeverity) {
+function createAlert(log, contractName, eventType, eventSeverity) {
   return Finding.fromObject({
     name: 'UMA Admin Event',
-    description: `The ${eventName} event was emitted by the ${contractName} contract`,
+    description: `The ${log.name} event was emitted by the ${contractName} contract`,
     alertId: 'AE-UMA-ADMIN-EVENT',
     type: FindingType[eventType],
     severity: FindingSeverity[eventSeverity],
@@ -71,23 +71,15 @@ async function handleTransaction(txEvent) {
     // for each contract name, lookup the address, events and interface
     const contractAddress = contractAddresses[contractName].toLowerCase();
     const events = getEvents(contractName);
-    const eventNames = events.map(element => element["name"]);
+    const eventNames = Object.keys(events);
     var iface = ifaces[contractName];
 
-    // Filter down to only the event we want to alert on
+    // Filter down to only the events we want to alert on
     const parsedLogs = filterAndParseLogs(txEvent.logs, contractAddress, iface, eventNames);
 
-    // Alert on each event in parsedLogs
+    // Alert on each item in parsedLogs
     parsedLogs.forEach((log) => {
-
-      // Get the event type and severity
-      const event = events.filter((event) => event["name"] === log.name)[0];
-      const eventType = event["type"];
-      const eventSeverity = event["severity"];
-
-      // Create the alert
-      findings.push(createAlert(log, log.name, contractName, eventType, eventSeverity));
-
+      findings.push(createAlert(log, contractName, events[log.name].type, events[log.name].severity));
     });
   });
 

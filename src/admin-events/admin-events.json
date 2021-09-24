@@ -1,17 +1,17 @@
 {
-  "Voting" : [
-    {"name" : "OwnershipTransferred", "type" : "Suspicious", "severity" : "High"},
-    {"name" : "PriceRequestAdded", "type" : "Unknown", "severity" : "Low"},
-    {"name" : "PriceResolved", "type" : "Unknown", "severity" : "Low"},
-    {"name" : "RewardsRetrieved", "type" : "Unknown", "severity" : "Low"},
-    {"name" : "VoteCommitted", "type" : "Unknown", "severity" : "Low"},
-    {"name" : "VoteRevealed", "type" : "Unknown", "severity" : "Low"}
-  ],
-  "Governor" : [
-    {"name" : "NewProposal", "type" : "Unknown", "severity" : "Low"},
-    {"name" : "ProposalExecuted", "type" : "Unknown", "severity" : "Low"},
-    {"name" : "AddedSharedMember", "type" : "Unknown", "severity" : "Low"},
-    {"name" : "RemovedSharedMember", "type" : "Unknown", "severity" : "Low"},
-    {"name" : "ResetExclusiveMember", "type" : "Suspicious", "severity" : "High"}
-  ]
+  "Voting" : {
+    "OwnershipTransferred" : {"type" : "Suspicious", "severity" : "High"},
+    "PriceRequestAdded" : {"type" : "Unknown", "severity" : "Low"},
+    "PriceResolved" : {"type" : "Unknown", "severity" : "Low"},
+    "RewardsRetrieved" : {"type" : "Unknown", "severity" : "Low"},
+    "VoteCommitted" : {"type" : "Unknown", "severity" : "Low"},
+    "VoteRevealed" : {"type" : "Unknown", "severity" : "Low"}
+  },
+  "Governor" : {
+    "NewProposal" : {"type" : "Unknown", "severity" : "Low"},
+    "ProposalExecuted" : {"type" : "Unknown", "severity" : "Low"},
+    "AddedSharedMember" : {"type" : "Unknown", "severity" : "Low"},
+    "RemovedSharedMember" : {"type" : "Unknown", "severity" : "Low"},
+    "ResetExclusiveMember" : {"type" : "Suspicious", "severity" : "High"}
+  }
 }
