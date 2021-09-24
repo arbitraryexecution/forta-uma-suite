@@ -8,11 +8,11 @@ const { getAbi, getAddress } = require('@uma/contracts-node');
 
 // get the addresses for the voting contract and voting token contract for chain id 1 (eth mainnet)
 const chainId = 1;
-const votingAddressPromise = getAddress("Voting", chainId);
-const votingTokenAddressPromise = getAddress("VotingToken", chainId);
+const votingAddressPromise = getAddress('Voting', chainId);
+const votingTokenAddressPromise = getAddress('VotingToken', chainId);
 
 // get the abi for the voting token contract
-const votingTokenAbi = getAbi("VotingToken");
+const votingTokenAbi = getAbi('VotingToken');
 
 const { umaEverestId } = require('../agent-config.json');
 
