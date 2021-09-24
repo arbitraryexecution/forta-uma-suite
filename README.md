@@ -31,6 +31,7 @@ the following handlers:
   - Severity is always "critical"
   - Type is always set to "exploit"
   - Metadata field contains VotingToken contract address, caller address, and transaction hash
+  - Must have traces enabled for this to operate correctly
 
 ## Test Data
 
