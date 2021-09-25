@@ -9,6 +9,24 @@ const {
 // load agent configuration
 const config = require('../../agent-config.json');
 
+// provide ABI for ERC-20 decimals() function
+const erc20Abi = [
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
+
 // stores the optimistic oracle contract address
 let optimisticOracleAddress;
 
@@ -129,9 +147,12 @@ const handleTransaction = async (txEvent) => {
       const { requester } = log.args;
       const { proposer } = log.args;
 
+      // set up ERC-20 contract to get decimals value
+      const erc20Contract = new ethers.Contract(currency, erc20Abi, provider);
+      const decimals = await erc20Contract.decimals();
+
       // convert proposedPrice to a human-readable decimal value
-      // TODO: decimals are token dependent; USDC uses 6 decimals
-      let proposedPrice = ethers.utils.formatUnits(log.args.proposedPrice, 6);
+      let proposedPrice = ethers.utils.formatUnits(log.args.proposedPrice, decimals);
 
       // convert the proposedPrice to a BigNumber type for difference calculations later
       proposedPrice = new BigNumber(proposedPrice.toString());
