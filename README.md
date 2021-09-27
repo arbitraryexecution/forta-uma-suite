@@ -6,6 +6,7 @@ This agent monitors various aspects of UMA. The UMA suite currently contains
 the following handlers:
 
 - deployer-watch
+- monitor-mint-calls
 
 ## Supported Chains
 
@@ -31,6 +32,13 @@ the following handlers:
   - Severity is set to value in admin-events.json
   - Type is set to value in admin-events.json
   - Metadata field contains Contract Name, Contract Address and Event Name
+
+- AE-UMA-UNAUTHORIZED-MINT
+  - Fired when the UMA VotingToken.mint() method is called by any address other than the UMA Voting contract
+  - Severity is always "critical"
+  - Type is always set to "exploit"
+  - Metadata field contains VotingToken contract address, caller address, and transaction hash
+  - Must have traces enabled for this to operate correctly
 
 ## Test Data
 

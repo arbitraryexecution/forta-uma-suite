@@ -1,10 +1,9 @@
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
-const { getAbi } = require('@uma/contracts-node');
+const { getAbi, getAddress } = require('@uma/contracts-node');
 const ethers = require('ethers');
 
 // load config files
 const config = require('../../agent-config.json');
-const contractAddresses = require('../../contract-addresses.json');
 const adminEvents = require('./admin-events.json');
 
 // returns the list of events for a given contract
@@ -17,10 +16,7 @@ function getEvents(contractName) {
 }
 
 // get contract names for mapping to events
-let contractNames = Object.keys(contractAddresses);
-
-// prune contract names that don't have any associated events
-contractNames = contractNames.filter((name) => (getEvents(name).length !== 0));
+let contractNames = Object.keys(adminEvents);
 
 // Create the interfaces for each contract that has events we wish to monitor
 const ifaces = {};
@@ -70,9 +66,11 @@ async function handleTransaction(txEvent) {
   const findings = [];
 
   // iterate over each contract name to get the address and events
-  contractNames.forEach((contractName) => {
+  contractNames.forEach(async (contractName) => {
     // for each contract name, lookup the address, events and interface
-    const contractAddress = contractAddresses[contractName].toLowerCase();
+    const chainId = 1;
+    const contractAddressPromise = getAddress(contractName, chainId);
+    const contractAddress = (await contractAddressPromise).toLowerCase();
     const events = getEvents(contractName);
     const eventNames = Object.keys(events);
     const iface = ifaces[contractName];

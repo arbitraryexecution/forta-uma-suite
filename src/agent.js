@@ -1,12 +1,13 @@
-const deployerWatchAgent = require('./deployer-watch');
 const adminEventsAgent = require('./admin-events/admin-events');
+const deployerWatchAgent = require('./deployer-watch');
+const monitorMintCallsAgent = require('./monitor-mint-calls');
 
 const handleTransaction = async (txEvent) => {
-
   const findings = (
     await Promise.all([
-      deployerWatchAgent.handleTransaction(txEvent),
       adminEventsAgent.handleTransaction(txEvent),
+      deployerWatchAgent.handleTransaction(txEvent),
+      monitorMintCallsAgent.handleTransaction(txEvent),
     ])
   ).flat();
 
