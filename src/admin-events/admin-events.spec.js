@@ -4,9 +4,6 @@ const ethers = require('ethers');
 const config = require('../../agent-config.json');
 const contractAddresses = require('../../contract-addresses.json');
 const votingContract = contractAddresses["Voting"].toLowerCase();
-const governorContract = contractAddresses["Governor"].toLowerCase();
-
-// ethers.utils.keccak256("VoteCommitted(datatype)")
 
 const {
   TransactionEvent,
@@ -33,18 +30,12 @@ describe('admin event monitoring', () => {
     {
       address: votingContract,
       topics: [
-        '0x6beca723245953d9ed92ae4d320d4772838e841161bfff12c78ae4268df525eb',
-        '0x00000000000000000000000083f9f90c3429dfda88fb2d99a8f5103a9ef083cc',
-        '0x00000000000000000000000000000000000000000000000000000000000024d2',
-        '0x41646d696e203133300000000000000000000000000000000000000000000000'
+        ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VoteCommitted(address,uint256,bytes32,uint256,bytes)")),
+        ethers.constants.HashZero,
+        ethers.constants.HashZero,
+        ethers.constants.HashZero,
       ],
       data: '0x00000000000000000000000000000000000000000000000000000000611570f900000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000',
-      logIndex: 140,
-      blockNumber: 13014605,
-      blockHash: '0x50adecba5f336a66e4105972de8045e86f61021b1190f48ec8bb2d9ad970d5b7',
-      transactionIndex: 87,
-      transactionHash: '0xc54bd749a060296d196d5b298555806f09cb3ed7f641bc0d5613db3e852491fa',
-      removed: false
     },
   ];
 
@@ -121,7 +112,7 @@ describe('admin event monitoring', () => {
           name: 'UMA Admin Event',
           description: `The ${eventName} event was emitted by the ${contractName} contract`,
           alertId: 'AE-UMA-ADMIN-EVENT',
-          type: FindingType.Suspicious,
+          type: FindingType.Unknown,
           severity: FindingSeverity.Low,
           metadata: {
             contractName,

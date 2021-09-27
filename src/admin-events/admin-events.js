@@ -33,15 +33,20 @@ function filterAndParseLogs(logs, address, iface, eventNames) {
 }
 
 // helper function to create alerts
-function createAlert(log, contractName, eventType, eventSeverity) {
+function createAlert(log, contractName, contractAddress, eventType, eventSeverity) {
+  const eventName = log.name;
   return Finding.fromObject({
     name: 'UMA Admin Event',
-    description: `The ${log.name} event was emitted by the ${contractName} contract`,
+    description: `The ${eventName} event was emitted by the ${contractName} contract`,
     alertId: 'AE-UMA-ADMIN-EVENT',
     type: FindingType[eventType],
     severity: FindingSeverity[eventSeverity],
     everestId: config.umaEverestId,
-    metadata: JSON.stringify(log),
+    metadata: {
+      contractName,
+      contractAddress,
+      eventName,
+    }
   });
 }
 
@@ -79,7 +84,7 @@ async function handleTransaction(txEvent) {
 
     // Alert on each item in parsedLogs
     parsedLogs.forEach((log) => {
-      findings.push(createAlert(log, contractName, events[log.name].type, events[log.name].severity));
+      findings.push(createAlert(log, contractName, contractAddress, events[log.name].type, events[log.name].severity));
     });
   });
 
