@@ -64,7 +64,6 @@ contractNames.forEach((contractName) => {
 
 async function handleTransaction(txEvent) {
   const findings = [];
-  const { hash } = txEvent.transaction;
 
   // iterate over each contract name to get the address and events
   contractNames.forEach((contractName) => {
