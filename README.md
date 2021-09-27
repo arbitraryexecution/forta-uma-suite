@@ -26,6 +26,12 @@ the following handlers:
   - Type is always set to "suspicious"
   - Metadata field contains to and from addresses
 
+- AE-UMA-ADMIN-EVENT
+  - Fired on any event in admin-events.json
+  - Severity is set to value in admin-events.json
+  - Type is set to value in admin-events.json
+  - Metadata field contains Contract Name, Contract Address and Event Name
+
 ## Test Data
 
 To run all the tests for this agent, use the following command: `npm run test`
