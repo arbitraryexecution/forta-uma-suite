@@ -7,9 +7,6 @@ const config = require('../../agent-config.json');
 const contractAddresses = require('../../contract-addresses.json');
 const adminEvents = require('./admin-events.json');
 
-// get contract names for mapping to events
-let contractNames = Object.keys(contractAddresses);
-
 // returns the list of events for a given contract
 function getEvents(contractName) {
   const events = adminEvents[contractName];
@@ -18,6 +15,25 @@ function getEvents(contractName) {
   }
   return events;
 }
+
+// get contract names for mapping to events
+let contractNames = Object.keys(contractAddresses);
+
+// prune contract names that don't have any associated events
+contractNames = contractNames.filter((name) => (getEvents(name).length !== 0));
+
+// Create the interfaces for each contract that has events we wish to monitor
+const ifaces = {};
+contractNames.forEach((contractName) => {
+  // Get the abi for the contract
+  const abi = getAbi(contractName);
+
+  // create ethers interface object
+  const iface = new ethers.utils.Interface(abi);
+
+  // Create an association between the contract name and the interface
+  ifaces[contractName] = iface;
+});
 
 // Filters the logs to only events in eventNames
 function filterAndParseLogs(logs, address, iface, eventNames) {
@@ -49,22 +65,6 @@ function createAlert(log, contractName, contractAddress, eventType, eventSeverit
     },
   });
 }
-
-// prune contract names that don't have any associated events
-contractNames = contractNames.filter((name) => (getEvents(name).length !== 0));
-
-// Create the interfaces for each contract that has events we wish to monitor
-const ifaces = {};
-contractNames.forEach((contractName) => {
-  // Get the abi for the contract
-  const abi = getAbi(contractName);
-
-  // create ethers interface object
-  const iface = new ethers.utils.Interface(abi);
-
-  // Create an association between the contract name and the interface
-  ifaces[contractName] = iface;
-});
 
 async function handleTransaction(txEvent) {
   const findings = [];
