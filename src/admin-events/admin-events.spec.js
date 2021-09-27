@@ -1,5 +1,5 @@
 const ethers = require('ethers');
-const { getAbi, getAddress } = require('@uma/contracts-node');
+const { getAddress } = require('@uma/contracts-node');
 
 // Load Config files
 const {
@@ -12,7 +12,7 @@ const {
 const config = require('../../agent-config.json');
 
 const chainId = 1;
-const votingAddressPromise = getAddress("Voting", chainId);
+const votingAddressPromise = getAddress('Voting', chainId);
 
 const { handleTransaction } = require('./admin-events');
 
@@ -27,10 +27,8 @@ function createTxEvent({ logs, addresses }) {
 
 // tests
 describe('admin event monitoring', () => {
-
   describe('handleTransaction', () => {
     it('returns empty findings if contract address does not match', async () => {
-
       // logs data for test case:  no address match + no topic match
       const logsNoMatchAddress = [
         {
@@ -85,7 +83,7 @@ describe('admin event monitoring', () => {
     });
 
     it('returns a finding if a target contract emits an event from its watchlist', async () => {
-      const votingContract = (await votingAddressPromise).toLowerCase();  
+      const votingContract = (await votingAddressPromise).toLowerCase();
       const eventName = 'VoteCommitted';
       const contractName = 'Voting';
       const contractAddress = votingContract;
@@ -103,7 +101,7 @@ describe('admin event monitoring', () => {
           data: '0x00000000000000000000000000000000000000000000000000000000611570f900000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000',
         },
       ];
-      
+
       // build txEvent
       const txEvent = createTxEvent({
         logs: logsMatchEvent,

@@ -16,7 +16,7 @@ function getEvents(contractName) {
 }
 
 // get contract names for mapping to events
-let contractNames = Object.keys(adminEvents);
+const contractNames = Object.keys(adminEvents);
 
 // Create the interfaces for each contract that has events we wish to monitor
 const ifaces = {};
