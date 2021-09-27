@@ -1,5 +1,5 @@
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
-const { getAbi, getBytecode, getAddress } = require("@uma/contracts-node")
+const { getAbi } = require('@uma/contracts-node');
 const ethers = require('ethers');
 
 // load config files
@@ -46,7 +46,7 @@ function createAlert(log, contractName, contractAddress, eventType, eventSeverit
       contractName,
       contractAddress,
       eventName,
-    }
+    },
   });
 }
 
@@ -54,9 +54,8 @@ function createAlert(log, contractName, contractAddress, eventType, eventSeverit
 contractNames = contractNames.filter((name) => (getEvents(name).length !== 0));
 
 // Create the interfaces for each contract that has events we wish to monitor
-var ifaces = {};
+const ifaces = {};
 contractNames.forEach((contractName) => {
-
   // Get the abi for the contract
   const abi = getAbi(contractName);
 
@@ -72,19 +71,22 @@ async function handleTransaction(txEvent) {
 
   // iterate over each contract name to get the address and events
   contractNames.forEach((contractName) => {
-
     // for each contract name, lookup the address, events and interface
     const contractAddress = contractAddresses[contractName].toLowerCase();
     const events = getEvents(contractName);
     const eventNames = Object.keys(events);
-    var iface = ifaces[contractName];
+    const iface = ifaces[contractName];
 
     // Filter down to only the events we want to alert on
     const parsedLogs = filterAndParseLogs(txEvent.logs, contractAddress, iface, eventNames);
 
     // Alert on each item in parsedLogs
     parsedLogs.forEach((log) => {
-      findings.push(createAlert(log, contractName, contractAddress, events[log.name].type, events[log.name].severity));
+      findings.push(createAlert(log,
+        contractName,
+        contractAddress,
+        events[log.name].type,
+        events[log.name].severity));
     });
   });
 
