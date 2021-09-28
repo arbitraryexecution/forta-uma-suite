@@ -7,7 +7,7 @@ const {
 } = require('forta-agent');
 
 // load agent configuration
-const config = require('../../agent-config.json');
+const config = require('../agent-config.json');
 
 // provide ABI for ERC-20 decimals() function
 const erc20Abi = [

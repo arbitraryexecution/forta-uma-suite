@@ -12,7 +12,10 @@ WORKDIR /app
 # if using build stage
 # COPY --from=builder /app/dist ./
 COPY ./src ./src
+<<<<<<< HEAD
+=======
 COPY agent-config.json ./
+>>>>>>> main
 COPY package*.json ./
 RUN npm ci --production
 CMD [ "npm", "run", "start:prod" ]
