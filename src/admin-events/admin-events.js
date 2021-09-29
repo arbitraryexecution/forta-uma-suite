@@ -3,7 +3,7 @@ const { getAbi, getAddress } = require('@uma/contracts-node');
 const ethers = require('ethers');
 
 // load config files
-const config = require('../../agent-config.json');
+const { umaEverestId } = require('../../agent-config.json');
 const adminEvents = require('./admin-events.json');
 
 // returns the list of events for a given contract
@@ -53,7 +53,7 @@ function createAlert(log, contractName, contractAddress, eventType, eventSeverit
     alertId: 'AE-UMA-ADMIN-EVENT',
     type: FindingType[eventType],
     severity: FindingSeverity[eventSeverity],
-    everestId: config.umaEverestId,
+    everestId: umaEverestId,
     metadata: {
       contractName,
       contractAddress,
@@ -64,13 +64,12 @@ function createAlert(log, contractName, contractAddress, eventType, eventSeverit
 
 async function handleTransaction(txEvent) {
   const findings = [];
+  const chainId = 1;
 
   // iterate over each contract name to get the address and events
   contractNames.forEach(async (contractName) => {
     // for each contract name, lookup the address, events and interface
-    const chainId = 1;
-    const contractAddressPromise = getAddress(contractName, chainId);
-    const contractAddress = (await contractAddressPromise).toLowerCase();
+    const contractAddress = (await getAddress(contractName, chainId)).toLowerCase();
     const events = getEvents(contractName);
     const eventNames = Object.keys(events);
     const iface = ifaces[contractName];

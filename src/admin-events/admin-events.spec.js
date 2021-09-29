@@ -9,7 +9,7 @@ const {
   Finding,
 } = require('forta-agent');
 
-const config = require('../../agent-config.json');
+const { umaEverestId } = require('../../agent-config.json');
 
 const chainId = 1;
 const votingAddressPromise = getAddress('Voting', chainId);
@@ -124,7 +124,7 @@ describe('admin event monitoring', () => {
             contractAddress,
             eventName,
           },
-          everestId: config.umaEverestId,
+          everestId: umaEverestId,
         }),
       ]);
     });
