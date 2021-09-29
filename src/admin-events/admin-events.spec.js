@@ -9,11 +9,7 @@ const votingAddressPromise = getAddress('Voting', chainId);
 
 const { createAlert, handleTransaction } = require('./admin-events');
 
-/**
- * TransactionEvent(type, network, transaction, receipt, traces, addresses, block)
- */
-
-// Can this be imported from Forta Library?
+// TransactionEvent(type, network, transaction, receipt, traces, addresses, block)
 function createTxEvent({ logs, addresses }) {
   return new TransactionEvent(null, null, null, { logs }, [], addresses, null);
 }
