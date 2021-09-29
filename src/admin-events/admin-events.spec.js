@@ -2,14 +2,7 @@ const ethers = require('ethers');
 const { getAddress } = require('@uma/contracts-node');
 
 // Load Config files
-const {
-  TransactionEvent,
-  FindingType,
-  FindingSeverity,
-  Finding,
-} = require('forta-agent');
-
-const { umaEverestId } = require('../../agent-config.json');
+const { TransactionEvent } = require('forta-agent');
 
 const chainId = 1;
 const votingAddressPromise = getAddress('Voting', chainId);
@@ -110,7 +103,7 @@ describe('admin event monitoring', () => {
 
       // run agent
       const findings = await handleTransaction(txEvent);
-      const alert = [createAlert(eventName, contractName, contractAddress, "Unknown", "Low")];
+      const alert = [createAlert(eventName, contractName, contractAddress, 'Unknown', 'Low')];
       expect(findings).toStrictEqual(alert);
     });
   });
