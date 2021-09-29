@@ -53,6 +53,7 @@ function createAlert(eventName, contractName, contractAddress, eventType, eventS
     type: FindingType[eventType],
     severity: FindingSeverity[eventSeverity],
     everestId: umaEverestId,
+    protocol: 'uma',
     metadata: {
       contractName,
       contractAddress,
