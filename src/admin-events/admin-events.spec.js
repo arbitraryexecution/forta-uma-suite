@@ -1,13 +1,11 @@
 const ethers = require('ethers');
 const { getAddress } = require('@uma/contracts-node');
-
-// Load Config files
 const { TransactionEvent } = require('forta-agent');
 
-const chainId = 1;
-const votingAddressPromise = getAddress('Voting', chainId);
-
 const { createAlert, handleTransaction } = require('./admin-events');
+
+const CHAIN_ID = 1;
+const votingAddressPromise = getAddress('Voting', CHAIN_ID);
 
 // TransactionEvent(type, network, transaction, receipt, traces, addresses, block)
 function createTxEvent({ logs, addresses }) {
@@ -50,10 +48,11 @@ describe('admin event monitoring', () => {
           address: votingContract,
           topics: [
             ethers.utils.keccak256(ethers.utils.toUtf8Bytes('EncryptedVote(address,uint256,bytes32,uint256,bytes,bytes)')),
-            ethers.constants.HashZero,
-            ethers.constants.HashZero,
-            ethers.constants.HashZero,
+            ethers.constants.HashZero, // voter
+            ethers.constants.HashZero, // roundid
+            ethers.constants.HashZero, // identifier
           ],
+          // Create a large dummy array to give ethers.parseLog() something to decode
           data: `0x${'0'.repeat(1000)}`,
         },
       ];
@@ -83,10 +82,11 @@ describe('admin event monitoring', () => {
           address: votingContract,
           topics: [
             ethers.utils.keccak256(ethers.utils.toUtf8Bytes('VoteCommitted(address,uint256,bytes32,uint256,bytes)')),
-            ethers.constants.HashZero,
-            ethers.constants.HashZero,
-            ethers.constants.HashZero,
+            ethers.constants.HashZero, // voter
+            ethers.constants.HashZero, // roundid
+            ethers.constants.HashZero, // identifier
           ],
+          // Create a large dummy array to give ethers.parseLog() something to decode
           data: `0x${'0'.repeat(1000)}`,
         },
       ];

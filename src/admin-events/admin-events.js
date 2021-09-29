@@ -18,6 +18,9 @@ function getEvents(contractName) {
 // get contract names for mapping to events
 const contractNames = Object.keys(adminEvents);
 
+// Constant for getAddress
+const CHAIN_ID = 1;
+
 // Create the interfaces for each contract that has events we wish to monitor
 const ifaces = {};
 contractNames.forEach((contractName) => {
@@ -64,12 +67,11 @@ function createAlert(eventName, contractName, contractAddress, eventType, eventS
 
 async function handleTransaction(txEvent) {
   const findings = [];
-  const chainId = 1;
 
   // iterate over each contract name to get the address and events
   contractNames.forEach(async (contractName) => {
     // for each contract name, lookup the address, events and interface
-    const contractAddress = (await getAddress(contractName, chainId)).toLowerCase();
+    const contractAddress = (await getAddress(contractName, CHAIN_ID)).toLowerCase();
     const events = getEvents(contractName);
     const eventNames = Object.keys(events);
     const iface = ifaces[contractName];
