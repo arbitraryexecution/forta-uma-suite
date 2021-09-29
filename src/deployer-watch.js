@@ -34,6 +34,7 @@ const handleTransaction = async (txEvent) => {
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
         everestId: config.umaEverestId,
+        protocol: "uma",
         metadata: {
           to,
           from,
@@ -51,6 +52,7 @@ const handleTransaction = async (txEvent) => {
           severity: FindingSeverity.High,
           type: FindingType.Suspicious,
           everestId: config.umaEverestId,
+          protocol: "uma",
           metadata: {
             to,
             from,

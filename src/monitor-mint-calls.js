@@ -28,6 +28,7 @@ function createAlert(fromAddress, votingTokenAddress, transactionHash) {
     severity: FindingSeverity.Critical,
     type: FindingType.Exploit,
     everestId: umaEverestId,
+    protocol: 'uma',
     metadata: {
       votingTokenAddress,
       fromAddress,
