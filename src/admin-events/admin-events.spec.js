@@ -14,7 +14,7 @@ const { umaEverestId } = require('../../agent-config.json');
 const chainId = 1;
 const votingAddressPromise = getAddress('Voting', chainId);
 
-const { handleTransaction } = require('./admin-events');
+const { createAlert, handleTransaction } = require('./admin-events');
 
 /**
  * TransactionEvent(type, network, transaction, receipt, traces, addresses, block)
@@ -110,23 +110,8 @@ describe('admin event monitoring', () => {
 
       // run agent
       const findings = await handleTransaction(txEvent);
-
-      // assertions
-      expect(findings).toStrictEqual([
-        Finding.fromObject({
-          name: 'UMA Admin Event',
-          description: `The ${eventName} event was emitted by the ${contractName} contract`,
-          alertId: 'AE-UMA-ADMIN-EVENT',
-          type: FindingType.Unknown,
-          severity: FindingSeverity.Low,
-          metadata: {
-            contractName,
-            contractAddress,
-            eventName,
-          },
-          everestId: umaEverestId,
-        }),
-      ]);
+      const alert = [createAlert(eventName, contractName, contractAddress, "Unknown", "Low")];
+      expect(findings).toStrictEqual(alert);
     });
   });
 });

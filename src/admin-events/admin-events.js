@@ -45,8 +45,7 @@ function filterAndParseLogs(logs, address, iface, eventNames) {
 }
 
 // helper function to create alerts
-function createAlert(log, contractName, contractAddress, eventType, eventSeverity) {
-  const eventName = log.name;
+function createAlert(eventName, contractName, contractAddress, eventType, eventSeverity) {
   return Finding.fromObject({
     name: 'UMA Admin Event',
     description: `The ${eventName} event was emitted by the ${contractName} contract`,
@@ -79,7 +78,7 @@ async function handleTransaction(txEvent) {
 
     // Alert on each item in parsedLogs
     parsedLogs.forEach((log) => {
-      findings.push(createAlert(log,
+      findings.push(createAlert(log.name,
         contractName,
         contractAddress,
         events[log.name].type,
@@ -91,5 +90,6 @@ async function handleTransaction(txEvent) {
 }
 
 module.exports = {
+  createAlert,
   handleTransaction,
 };
