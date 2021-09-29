@@ -1,17 +1,25 @@
 const deployerWatchAgent = require('./deployer-watch');
 const monitorMintCallsAgent = require('./monitor-mint-calls');
 
-const handleTransaction = async (txEvent) => {
-  const findings = (
-    await Promise.all([
+function provideHandleTransaction(deployerWatchAgent, monitorMintCallsAgent) {
+  return async function handleTransaction(txEvent) {
+    const findings = [];
+
+    const [deployerWatchFindings, monitorMintCallsFindings] = await Promise.all([
       deployerWatchAgent.handleTransaction(txEvent),
       monitorMintCallsAgent.handleTransaction(txEvent),
-    ])
-  ).flat();
+    ]);
 
-  return findings;
-};
+    findings.push(...deployerWatchFindings);
+    findings.push(...monitorMintCallsFindings);
+    return findings;
+  };
+}
 
 module.exports = {
-  handleTransaction,
+  provideHandleTransaction,
+  handleTransaction: provideHandleTransaction(
+    deployerWatchAgent,
+    monitorMintCallsAgent
+  ),
 };
