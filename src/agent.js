@@ -1,6 +1,6 @@
-const adminEventsAgent = require('./admin-events/admin-events');
-const deployerWatchAgent = require('./deployer-watch');
-const monitorMintCallsAgent = require('./monitor-mint-calls');
+const adminEvents = require('./admin-events/admin-events');
+const deployerWatch = require('./deployer-watch');
+const monitorMintCalls = require('./monitor-mint-calls');
 
 function provideHandleTransaction(adminEventsAgent, deployerWatchAgent, monitorMintCallsAgent) {
   return async function handleTransaction(txEvent) {
@@ -24,8 +24,8 @@ function provideHandleTransaction(adminEventsAgent, deployerWatchAgent, monitorM
 module.exports = {
   provideHandleTransaction,
   handleTransaction: provideHandleTransaction(
-    adminEventsAgent,
-    deployerWatchAgent,
-    monitorMintCallsAgent,
+    adminEvents,
+    deployerWatch,
+    monitorMintCalls,
   ),
 };

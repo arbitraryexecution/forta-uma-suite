@@ -25,8 +25,9 @@ const handleTransaction = async (txEvent) => {
   }
 
   // low severity alert if the Deployer was involved
-  // the first and last addresses in txAddresses will be to and from
-  // this will also catch scenarios where deployer is involved but not the initiator
+  // txAddresses includes to and from
+  // we are using txAddresses instead of explicitly checking against to and from
+  // to also catch scenarios where deployer is involved but not the intiator
   if (txAddresses[deployerAddress]) {
     findings.push(
       Finding.fromObject({
