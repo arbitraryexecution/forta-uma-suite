@@ -14,10 +14,14 @@
     "test": "jest"
   },
   "dependencies": {
+    "@uma/common": "^2.7.0",
     "@uma/contracts-node": "^0.1.0",
+    "@uma/core": "^2.7.0",
+    "@uma/financial-templates-lib": "^2.7.0",
     "bignumber.js": "^9.0.1",
     "ethers": "^5.4.6",
-    "forta-agent": "^0.0.18"
+    "forta-agent": "^0.0.18",
+    "web3": "^1.5.3"
   },
   "devDependencies": {
     "eslint": "^7.32.0",
