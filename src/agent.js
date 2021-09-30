@@ -5,8 +5,8 @@ const liquidatorAgent = require('./bot-handlers/liquidator');
 const handleTransaction = async (txEvent) => {
   const findings = (
     await Promise.all([
-      //deployerWatchAgent.handleTransaction(txEvent),
-      //monitorMintCallsAgent.handleTransaction(txEvent),
+      // deployerWatchAgent.handleTransaction(txEvent),
+      // monitorMintCallsAgent.handleTransaction(txEvent),
     ])
   ).flat();
 
@@ -24,6 +24,6 @@ const handleBlock = async (blockEvent) => {
 };
 
 module.exports = {
-  //handleTransaction,
+  // handleTransaction,
   handleBlock,
 };
