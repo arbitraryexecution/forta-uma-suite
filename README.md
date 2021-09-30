@@ -27,6 +27,12 @@ the following handlers:
   - Type is always set to "suspicious"
   - Metadata field contains to and from addresses
 
+- AE-UMA-ADMIN-EVENT
+  - Fired on any event in admin-events.json
+  - Severity is set to value in admin-events.json
+  - Type is set to value in admin-events.json
+  - Metadata field contains contract name, contract address and event name
+
 - AE-UMA-UNAUTHORIZED-MINT
   - Fired when the UMA VotingToken.mint() method is called by any address other than the UMA Voting contract
   - Severity is always "critical"
