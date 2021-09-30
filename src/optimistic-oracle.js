@@ -78,14 +78,30 @@ async function getPrice(contractAddress) {
   const baseUrl = 'https://api.coingecko.com/api/v3/simple/token_price/';
   const id = 'ethereum';
   const vsCurrency = 'usd';
+  // contractAddress must be checksum encoded
   const requestUrl = `${baseUrl + id}?contract_addresses=${contractAddress}&vs_currencies=${vsCurrency}`;
 
   const response = await axios.get(requestUrl);
+
+  // check that we got a valid response
   if (response.status !== 200) {
-    throw `Error getting response from server (status=${response.status})`;
+    throw new Error(`Error getting response from CoinGecko (status=${response.status})`);
   }
 
-  const price = response.data[contractAddress.toLowerCase()][vsCurrency];
+  // check that we got data for this token address
+  if (Object.keys(response.data).length === 0) {
+    throw new Error(`CoinGecko returned no data for token '${contractAddress}'`);
+  }
+
+  // in the response data, the token address key is NOT checksum encoded
+  const tokenAddress = contractAddress.toLowerCase();
+
+  // check that the currency denomination we requested is supported
+  if (!(Object.prototype.hasOwnProperty.call(response.data[tokenAddress], vsCurrency))) {
+    throw new Error(`CoinGecko has no data for token '${tokenAddress}' vs currency '${vsCurrency}'`);
+  }
+
+  const price = response.data[tokenAddress][vsCurrency];
 
   return price;
 }
@@ -113,6 +129,7 @@ function provideHandleTransaction(erc20Contract) {
     const parsedLogs = oracleLogs.map(parse).filter(filter);
 
     // process the target events
+    /* eslint-disable no-await-in-loop */
     for (let i = 0; i < parsedLogs.length; i++) {
       const log = parsedLogs[i];
       if (log.name === 'RequestPrice') {
@@ -153,10 +170,11 @@ function provideHandleTransaction(erc20Contract) {
         // set up ERC-20 contract to get decimals value
         // in production, erc20Contract will always be undefined
         // in testing, erc20Contract will be assigned to a mock contract
-        // (this is an unfortunate case of modifying the implementation to support testing)
+        /* eslint-disable no-param-reassign */
         if (erc20Contract === undefined) {
           erc20Contract = new ethers.Contract(currency, erc20Abi, provider);
         }
+        /* eslint-enable no-param-reassign */
 
         const decimals = await erc20Contract.decimals();
 
@@ -196,8 +214,8 @@ function provideHandleTransaction(erc20Contract) {
               requester,
               proposer,
               currency,
-              proposedPrice,
-              price,
+              proposedPrice: proposedPrice.toString(),
+              price: price.toString(),
             },
           }));
         }
