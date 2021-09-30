@@ -5,8 +5,8 @@ const {
   Finding,
 } = require('forta-agent');
 
-const addresses = require('./config/deployer-watch.json');
-const config = require('../agent-config.json');
+const addresses = require('./deployer-watch.json');
+const config = require('../../agent-config.json');
 const { handleTransaction } = require('./deployer-watch');
 
 const deployerAddress = addresses.Deployer.toLowerCase();

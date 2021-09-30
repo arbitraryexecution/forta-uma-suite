@@ -6,6 +6,7 @@ This agent monitors various aspects of UMA. The UMA suite currently contains
 the following handlers:
 
 - deployer-watch
+- admin-events
 - monitor-mint-calls
 - optimistic-oracle
 

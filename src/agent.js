@@ -1,7 +1,8 @@
+// forta-uma-suite agent is a collection of sub-agents
 const adminEventsAgent = require('./admin-events/admin-events');
-const deployerWatchAgent = require('./deployer-watch');
-const monitorMintCallsAgent = require('./monitor-mint-calls');
-const optimisticOracleAgent = require('./optimistic-oracle');
+const deployerWatchAgent = require('./deployer-watch/deployer-watch');
+const monitorMintCallsAgent = require('./monitor-mint-calls/monitor-mint-calls');
+const optimisticOracleAgent = require('./optimistic-oracle/optimistic-oracle');
 
 const handleTransaction = async (txEvent) => {
   const findings = (

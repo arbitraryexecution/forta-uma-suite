@@ -7,10 +7,10 @@ const {
 const { provideHandleTransaction } = require('./optimistic-oracle');
 
 // load functions from event manipulation library
-const { createLog, createReceipt } = require('./event-utils');
+const { createLog, createReceipt } = require('../event-utils');
 
 // load agent configuration
-const config = require('../agent-config.json');
+const config = require('../../agent-config.json');
 
 // constant values
 const CHAIN_ID = 1; // mainnet
