@@ -38,6 +38,9 @@ contractNames.forEach((contractName) => {
 function filterAndParseLogs(logs, address, iface, eventNames) {
   // collect logs only from the contract
   const contractLogs = logs.filter((log) => log.address === address);
+  if (contractLogs.length === 0) {
+    return [];
+  }
 
   // decode logs and filter on the ones we are interested in
   const parse = (log) => iface.parseLog(log);
