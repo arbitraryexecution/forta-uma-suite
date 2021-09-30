@@ -19,10 +19,7 @@ const Web3 = require('web3');
 // Contract ABIs and network Addresses.
 const { getAbi, findContractVersion } = require('@uma/core');
 
-// Contract addresses
-const configList = require('./contracts.json');
-
-// initialize global constants
+// initialize global constants TODO: ensure web3 is correct
 const getTime = () => Math.round(new Date().getTime() / 1000);
 const web3 = new Web3(new Web3.providers.HttpProvider(getJsonRpcUrl()));
 
@@ -47,7 +44,7 @@ async function checkIsExpiredOrShutdown(financialContractClient) {
 
 async function processContractAndPriceFeed({ financialContractAddress, priceFeedConfig }) {
   // find contract version
-  const detectedContract = findContractVersion(financialContractAddress, web3);
+  const detectedContract = await findContractVersion(financialContractAddress, web3);
 
   // Check that the version and type is supported.
   // Note if either is null this check will also catch it.
@@ -71,19 +68,11 @@ async function processContractAndPriceFeed({ financialContractAddress, priceFeed
   // Generate Financial Contract properties to inform bot of important on-chain
   // state values that we only want to query once.
   const [
-    collateralRequirement,
-    priceIdentifier,
-    minSponsorTokens,
     collateralTokenAddress,
     syntheticTokenAddress,
-    withdrawLiveness,
   ] = await Promise.all([
-    financialContract.methods.collateralRequirement().call(),
-    financialContract.methods.priceIdentifier().call(),
-    financialContract.methods.minSponsorTokens().call(),
     financialContract.methods.collateralCurrency().call(),
     financialContract.methods.tokenCurrency().call(),
-    financialContract.methods.withdrawalLiveness().call(),
   ]);
 
   const collateralToken = new web3.eth.Contract(getAbi('ExpandedERC20'), collateralTokenAddress);
@@ -92,13 +81,6 @@ async function processContractAndPriceFeed({ financialContractAddress, priceFeed
     collateralToken.methods.decimals().call(),
     syntheticToken.methods.decimals().call(),
   ]);
-
-  const financialContractProps = {
-    crRatio: collateralRequirement,
-    priceIdentifier,
-    minSponsorSize: minSponsorTokens,
-    withdrawLiveness,
-  };
 
   // set up price feed.
   const priceFeed = await createReferencePriceFeedForFinancialContract(
@@ -132,17 +114,17 @@ async function processContractAndPriceFeed({ financialContractAddress, priceFeed
     detectedContract.contractType,
   );
 
-  return { financialContractClient, priceFeed, financialContractProps };
+  return { financialContractClient, priceFeed };
 }
 
-async function initializeContracts() {
+async function initializeContracts(financialContractData) {
   logger.silent = true;
 
   // process each financial contract in our config list
   return Promise.all(
-    configList.map((entry) => processContractAndPriceFeed(entry)),
+    financialContractData.map((entry) => processContractAndPriceFeed(entry)),
   ).catch((error) => console.error(error))
-  // filter out errored results
+  // filter out errored results TODO: needs to check for undefined
     .then((entries) => entries.filter((entry) => entry));
 }
 
