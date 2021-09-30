@@ -24,8 +24,10 @@ const handleTransaction = async (txEvent) => {
     return findings;
   }
 
+  // low severity alert if the Deployer was involved
+  // the first and last addresses in txAddresses will be to and from
+  // this will also catch scenarios where deployer is involved but not the initiator
   if (txAddresses[deployerAddress]) {
-    // low severity alert if the Deployer was involved
     findings.push(
       Finding.fromObject({
         name: 'UMA Deployer Watch',
@@ -34,7 +36,7 @@ const handleTransaction = async (txEvent) => {
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
         everestId: config.umaEverestId,
-        protocol: "uma",
+        protocol: 'uma',
         metadata: {
           to,
           from,
@@ -52,7 +54,7 @@ const handleTransaction = async (txEvent) => {
           severity: FindingSeverity.High,
           type: FindingType.Suspicious,
           everestId: config.umaEverestId,
-          protocol: "uma",
+          protocol: 'uma',
           metadata: {
             to,
             from,

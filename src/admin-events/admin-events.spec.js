@@ -23,7 +23,7 @@ describe('admin event monitoring', () => {
 
       // Build Transaction Event
       const txEvent = createTransactionEvent({
-        receipt: {logs: logsNoMatchAddress},
+        receipt: { logs: logsNoMatchAddress },
         addresses: { [ethers.constants.AddressZero]: true },
       });
 
@@ -54,7 +54,7 @@ describe('admin event monitoring', () => {
 
       // Build Transaction Event
       const txEvent = createTransactionEvent({
-        receipt: {logs: logsNoMatchEvent},
+        receipt: { logs: logsNoMatchEvent },
         addresses: { [votingContract]: true },
       });
 
@@ -88,7 +88,7 @@ describe('admin event monitoring', () => {
 
       // Build Transaction Event
       const txEvent = createTransactionEvent({
-        receipt: {logs: logsMatchEvent},
+        receipt: { logs: logsMatchEvent },
         addresses: { [votingContract]: true },
       });
 

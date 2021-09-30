@@ -6,7 +6,9 @@ function provideHandleTransaction(adminEventsAgent, deployerWatchAgent, monitorM
   return async function handleTransaction(txEvent) {
     const findings = [];
 
-    const [adminEventsFindings, deployerWatchFindings, monitorMintCallsFindings] = await Promise.all([
+    const [adminEventsFindings,
+      deployerWatchFindings,
+      monitorMintCallsFindings] = await Promise.all([
       adminEventsAgent.handleTransaction(txEvent),
       deployerWatchAgent.handleTransaction(txEvent),
       monitorMintCallsAgent.handleTransaction(txEvent),
@@ -24,6 +26,6 @@ module.exports = {
   handleTransaction: provideHandleTransaction(
     adminEventsAgent,
     deployerWatchAgent,
-    monitorMintCallsAgent
+    monitorMintCallsAgent,
   ),
 };

@@ -1,6 +1,6 @@
-const { provideHandleTransaction } = require("./agent");
+const { provideHandleTransaction } = require('./agent');
 
-describe("agents", () => {
+describe('agents', () => {
   let handleTransaction;
   const mockAdminEventsAgent = {
     handleTransaction: jest.fn(),
@@ -12,20 +12,20 @@ describe("agents", () => {
     handleTransaction: jest.fn(),
   };
   const mockTxEvent = {
-    some: "event",
+    some: 'event',
   };
 
   beforeAll(() => {
     handleTransaction = provideHandleTransaction(
-        mockAdminEventsAgent,
-        mockDeployerWatchAgent,
-        mockMonitorMintCallsAgent
+      mockAdminEventsAgent,
+      mockDeployerWatchAgent,
+      mockMonitorMintCallsAgent,
     );
   });
 
-  describe("handleTransaction", () => {
-    it("invokes admin-events, deployer-watch and monitor-mint-calls agents and returns their findings", async () => {
-      const mockFinding = { some: "finding" };
+  describe('handleTransaction', () => {
+    it('invokes admin-events, deployer-watch and monitor-mint-calls agents and returns their findings', async () => {
+      const mockFinding = { some: 'finding' };
       mockAdminEventsAgent.handleTransaction.mockReturnValueOnce([mockFinding]);
       mockDeployerWatchAgent.handleTransaction.mockReturnValueOnce([mockFinding]);
       mockMonitorMintCallsAgent.handleTransaction.mockReturnValueOnce([mockFinding]);
@@ -35,15 +35,15 @@ describe("agents", () => {
       expect(findings).toStrictEqual([mockFinding, mockFinding, mockFinding]);
       expect(mockAdminEventsAgent.handleTransaction).toHaveBeenCalledTimes(1);
       expect(mockAdminEventsAgent.handleTransaction).toHaveBeenCalledWith(
-        mockTxEvent
+        mockTxEvent,
       );
       expect(mockDeployerWatchAgent.handleTransaction).toHaveBeenCalledTimes(1);
       expect(mockDeployerWatchAgent.handleTransaction).toHaveBeenCalledWith(
-        mockTxEvent
+        mockTxEvent,
       );
       expect(mockMonitorMintCallsAgent.handleTransaction).toHaveBeenCalledTimes(1);
       expect(mockMonitorMintCallsAgent.handleTransaction).toHaveBeenCalledWith(
-        mockTxEvent
+        mockTxEvent,
       );
     });
   });
