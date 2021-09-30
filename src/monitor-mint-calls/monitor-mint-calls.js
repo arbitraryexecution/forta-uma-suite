@@ -7,14 +7,14 @@ const {
 const { getAbi, getAddress } = require('@uma/contracts-node');
 
 // get the addresses for the voting contract and voting token contract for chain id 1 (eth mainnet)
-const chainId = 1;
-const votingAddressPromise = getAddress('Voting', chainId);
-const votingTokenAddressPromise = getAddress('VotingToken', chainId);
+const CHAIN_ID = 1;
+const votingAddressPromise = getAddress('Voting', CHAIN_ID);
+const votingTokenAddressPromise = getAddress('VotingToken', CHAIN_ID);
 
 // get the abi for the voting token contract
 const votingTokenAbi = getAbi('VotingToken');
 
-const { umaEverestId } = require('../agent-config.json');
+const { umaEverestId } = require('../../agent-config.json');
 
 // create ethers interface object for the VotingToken.sol contract
 const iface = new ethers.utils.Interface(votingTokenAbi);

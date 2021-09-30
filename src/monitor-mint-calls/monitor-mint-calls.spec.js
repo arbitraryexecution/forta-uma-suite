@@ -3,16 +3,16 @@ const { getAbi, getAddress } = require('@uma/contracts-node');
 const { createTransactionEvent } = require('forta-agent');
 
 // override the timeout from the agent configuration JSON file before the handler is imported
-jest.mock('../agent-config.json', () => ({
+jest.mock('../../agent-config.json', () => ({
   monitorMintCalls: { rpcTimeoutMilliseconds: 1000 },
 }));
 
 const { handleTransaction, createAlert } = require('./monitor-mint-calls');
 
 // get the addresses for the voting contract and voting token contract for chain id 1 (eth mainnet)
-const chainId = 1;
-const votingAddressPromise = getAddress('Voting', chainId);
-const votingTokenAddressPromise = getAddress('VotingToken', chainId);
+const CHAIN_ID = 1;
+const votingAddressPromise = getAddress('Voting', CHAIN_ID);
+const votingTokenAddressPromise = getAddress('VotingToken', CHAIN_ID);
 
 // get the abi for the voting token contract
 const votingTokenAbi = getAbi('VotingToken');

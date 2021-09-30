@@ -1,6 +1,7 @@
-const deployerWatchAgent = require('./deployer-watch');
-const monitorMintCallsAgent = require('./monitor-mint-calls');
+// forta-uma-suite agent is a collection of sub-agents
+const deployerWatchAgent = require('./deployer-watch/deployer-watch');
 const liquidatorAgent = require('./bot-handlers/liquidator');
+const monitorMintCallsAgent = require('./monitor-mint-calls/monitor-mint-calls');
 
 const handleTransaction = async (txEvent) => {
   const findings = (
