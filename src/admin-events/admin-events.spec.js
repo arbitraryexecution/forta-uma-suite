@@ -1,18 +1,13 @@
 const ethers = require('ethers');
 const { getAddress } = require('@uma/contracts-node');
-const { TransactionEvent } = require('forta-agent');
+const { createTransactionEvent } = require('forta-agent');
 
 const { createAlert, handleTransaction } = require('./admin-events');
 
 const CHAIN_ID = 1;
 const votingAddressPromise = getAddress('Voting', CHAIN_ID);
 
-// TransactionEvent(type, network, transaction, receipt, traces, addresses, block)
-function createTxEvent({ logs, addresses }) {
-  return new TransactionEvent(null, null, null, { logs }, [], addresses, null);
-}
-
-// tests
+// Tests
 describe('admin event monitoring', () => {
   describe('handleTransaction', () => {
     it('returns empty findings if contract address does not match', async () => {
@@ -26,23 +21,23 @@ describe('admin event monitoring', () => {
         },
       ];
 
-      // build txEvent
-      const txEvent = createTxEvent({
-        logs: logsNoMatchAddress,
+      // Build Transaction Event
+      const txEvent = createTransactionEvent({
+        receipt: {logs: logsNoMatchAddress},
         addresses: { [ethers.constants.AddressZero]: true },
       });
 
-      // run agent
+      // Run agent
       const findings = await handleTransaction(txEvent);
 
-      // assertions
+      // Assertions
       expect(findings).toStrictEqual([]);
     });
 
     it('returns empty findings if contract address matches but not event', async () => {
       const votingContract = (await votingAddressPromise).toLowerCase();
 
-      // logs data for test case: address match + no topic match
+      // Logs data for test case: address match + no topic match
       const logsNoMatchEvent = [
         {
           address: votingContract,
@@ -57,16 +52,16 @@ describe('admin event monitoring', () => {
         },
       ];
 
-      // build tx event
-      const txEvent = createTxEvent({
-        logs: logsNoMatchEvent,
+      // Build Transaction Event
+      const txEvent = createTransactionEvent({
+        receipt: {logs: logsNoMatchEvent},
         addresses: { [votingContract]: true },
       });
 
-      // run agent
+      // Run agent
       const findings = await handleTransaction(txEvent);
 
-      // assertions
+      // Assertions
       expect(findings).toStrictEqual([]);
     });
 
@@ -76,7 +71,7 @@ describe('admin event monitoring', () => {
       const contractName = 'Voting';
       const contractAddress = votingContract;
 
-      // logs data for test case: address match + topic match (should trigger a finding)
+      // Logs data for test case: address match + topic match (should trigger a finding)
       const logsMatchEvent = [
         {
           address: votingContract,
@@ -91,13 +86,13 @@ describe('admin event monitoring', () => {
         },
       ];
 
-      // build txEvent
-      const txEvent = createTxEvent({
-        logs: logsMatchEvent,
+      // Build Transaction Event
+      const txEvent = createTransactionEvent({
+        receipt: {logs: logsMatchEvent},
         addresses: { [votingContract]: true },
       });
 
-      // run agent
+      // Run agent
       const findings = await handleTransaction(txEvent);
       const alert = [createAlert(eventName, contractName, contractAddress, 'Unknown', 'Low')];
       expect(findings).toStrictEqual(alert);
