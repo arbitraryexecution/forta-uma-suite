@@ -111,7 +111,6 @@ function provideHandleTransaction(erc20Contract) {
     const parse = (log) => iface.parseLog(log);
     const filter = (log) => eventNames.indexOf(log.name) !== -1;
     const parsedLogs = oracleLogs.map(parse).filter(filter);
-    // console.log(parsedLogs);
 
     // process the target events
     for (let i = 0; i < parsedLogs.length; i++) {
@@ -124,7 +123,6 @@ function provideHandleTransaction(erc20Contract) {
         let price;
         try {
           price = await getPrice(currency);
-          // console.log(price); // DEBUG
         } catch (error) {
           console.error(error);
           continue;
@@ -137,6 +135,7 @@ function provideHandleTransaction(erc20Contract) {
           alertId: 'AE-UMA-OO-REQUESTPRICE',
           severity: FindingSeverity.Low,
           type: FindingType.Unknown,
+          protocol: 'uma',
           everestId: config.umaEverestId,
           metadata: {
             requester,
@@ -160,7 +159,6 @@ function provideHandleTransaction(erc20Contract) {
         }
 
         const decimals = await erc20Contract.decimals();
-        console.log(`decimals=${decimals}`);
 
         // convert proposedPrice to a human-readable decimal value
         let proposedPrice = ethers.utils.formatUnits(log.args.proposedPrice, decimals);
@@ -192,6 +190,7 @@ function provideHandleTransaction(erc20Contract) {
             alertId: 'AE-UMA-OO-PROPOSEPRICE',
             severity: FindingSeverity.Low,
             type: FindingType.Unknown,
+            protocol: 'uma',
             everestId: config.umaEverestId,
             metadata: {
               requester,

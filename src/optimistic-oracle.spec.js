@@ -1,6 +1,6 @@
 const ethers = require('ethers');
 const axios = require('axios');
-const { getAddress } = require('@uma/contracts-node');
+const { getAbi, getAddress } = require('@uma/contracts-node');
 const {
   Finding, FindingSeverity, FindingType, createTransactionEvent,
 } = require('forta-agent');
@@ -13,6 +13,7 @@ const config = require('../agent-config.json');
 const CHAIN_ID = 1; // mainnet
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 const ZERO_HASH = ethers.constants.HashZero;
+const USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 
 const requestPriceEvent = 'RequestPrice(address,bytes32,uint256,bytes,address,uint256,uint256)';
 const proposePriceEvent = 'ProposePrice(address,address,bytes32,uint256,bytes,int256,uint256,address)';
@@ -20,32 +21,124 @@ const proposePriceEvent = 'ProposePrice(address,address,bytes32,uint256,bytes,in
 const requestPriceEventTopic = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(requestPriceEvent));
 const proposePriceEventTopic = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(proposePriceEvent));
 
+const optimisticOracleAbi = getAbi('OptimisticOracle');
+
+// create interface
+const iface = new ethers.utils.Interface(optimisticOracleAbi);
+
+// default empty log structure
+const emptyLog = {
+  address: ZERO_HASH,
+  logIndex: 0,
+  blockNumber: 0,
+  blockHash: ZERO_HASH,
+  transactionIndex: 0,
+  transactionHash: ZERO_HASH,
+  removed: false,
+};
+
+// function to encode default values
+function defaultType(type) {
+  switch (type) {
+    case 'address':
+      return ZERO_ADDRESS;
+    case 'bool':
+      return false;
+    case 'string':
+      return '';
+    case 'bytes':
+      return '';
+    case 'array':
+      throw new Error('array not implemented');
+    case 'tuple':
+      throw new Error('tuple not implemented');
+    default:
+      return 0;
+  }
+}
+
+// creates log with sparse inputs
+function createLog(eventAbi, inputArgs, logArgs) {
+  const topics = [];
+  const dataTypes = [];
+  const dataValues = [];
+
+  // initialize default log and assign passed in values
+  const log = { ...emptyLog, ...logArgs };
+
+  // build topics and data fields
+  topics.push(ethers.utils.Interface.getEventTopic(eventAbi));
+
+  // parse each input, save into topic or data depending on indexing, may
+  // have to skip if param._isParamType is false, does not support dynamic types
+  eventAbi.inputs.forEach((param) => {
+    const { type } = param;
+    const data = inputArgs[param.name] || defaultType(type);
+    if (param.indexed) {
+      topics.push(ethers.utils.defaultAbiCoder.encode([type], [data]));
+    } else {
+      dataTypes.push(type);
+      dataValues.push(data);
+    }
+  });
+
+  // assign topic and data
+  log.topics = topics;
+  log.data = ethers.utils.defaultAbiCoder.encode(dataTypes, dataValues);
+
+  return log;
+}
+
+/**
+ * Log(address, topics, data, logIndex, blockNumber, blockHash, transactionIndex,
+ * transactionHash, removed)
+ *
+ * Receipt(status, root, gasUsed, cumulativeGasUsed, logsBloom, logs, contractAddress
+ * blockNumber, blockHash, transactionIndex, transactionHash)
+ */
+function createReceipt(logs, contractAddress) {
+  return {
+    status: null,
+    root: null,
+    gasUsed: null,
+    cumulativeGasUsed: null,
+    logsBloom: null,
+    logs,
+    contractAddress,
+    blockHash: null,
+    transactionIndex: null,
+    transactionHash: null,
+    blockNumber: null,
+  };
+}
+
+// mock the web request to CoinGecko
+// use the USDC token address (must be lowercase)
+const mockPrice = 1;
+const mockCoinGeckoResponse = {
+  status: 200,
+  statusText: 'OK',
+  data: {
+    '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+      usd: mockPrice,
+    },
+  },
+};
+
+jest.mock('axios');
+axios.get.mockResolvedValue(mockCoinGeckoResponse);
+
+// mock the call to <ERC20Contract>.decimals()
+const mockDecimals = 6;  // USDC = 6 decimals
+const mockErc20Contract = {
+  decimals: jest.fn(() => Promise.resolve(
+    mockDecimals,
+  )),
+};
+
 describe('UMA optimistic oracle validation agent', () => {
   let handleTransaction = null;
   let optimisticOracleAddress = null;
-
-  // mock the web request to CoinGecko
-  let mockPrice = 0;
-  const mockCoinGeckoResponse = {
-    status: 200,
-    statusText: 'OK',
-    data: {
-      '0x0000000000000000000000000000000000000000': {
-        usd: mockPrice,
-      },
-    },
-  };
-
-  jest.mock('axios');
-  axios.get.mockResolvedValue(mockCoinGeckoResponse);
-
-  // mock the call to <ERC20Contract>.decimals()
-  const mockDecimals = 0;
-  const mockErc20Contract = {
-    decimals: jest.fn(() => Promise.resolve(
-      mockDecimals,
-    )),
-  };
 
   // reset function call count after each test
   afterEach(() => {
@@ -77,25 +170,29 @@ describe('UMA optimistic oracle validation agent', () => {
 
   it('returns a finding if a price was requested from the oracle', async () => {
     const requester = ZERO_ADDRESS;
-    const currency = ZERO_ADDRESS;
-
-    mockPrice = 1;
+    const currency = USDC_ADDRESS;
     const price = mockPrice;
 
-    const txEvent = createTransactionEvent({
-      receipt: {
-        logs: [
-          {
-            address: optimisticOracleAddress,
-            topics: [
-              requestPriceEventTopic,
-              ZERO_HASH, // requester
-            ],
-            data: '0x'.padEnd('1000', '0'), // TODO: build a proper data string for decoding
-          },
-        ],
+    // build a log that encodes the data for a RequestPrice event
+    // the agent will decode 'requester' and 'currency' from the data
+    const log = createLog(
+      iface.getEvent('RequestPrice'),
+      {
+        requester,
+        identifier: ZERO_HASH,
+        timestamp: 0,
+        ancillaryData: '0x00',
+        currency,
+        reward: 0,
+        finalFee: 0,
       },
-    });
+      { address: optimisticOracleAddress },
+    );
+
+    // build a receipt
+    const receipt = createReceipt([log], ZERO_ADDRESS);
+    
+    const txEvent = createTransactionEvent({ receipt });
 
     handleTransaction = provideHandleTransaction(mockErc20Contract);
     const findings = await handleTransaction(txEvent);
@@ -108,6 +205,7 @@ describe('UMA optimistic oracle validation agent', () => {
         alertId: 'AE-UMA-OO-REQUESTPRICE',
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
+        protocol: 'uma',
         everestId: config.umaEverestId,
         metadata: {
           requester,
@@ -119,23 +217,33 @@ describe('UMA optimistic oracle validation agent', () => {
   });
 
   it('returns an empty finding if proposed price difference is below threshold', async () => {
-    mockPrice = 1;
+    const requester = ZERO_ADDRESS;
+    const proposer = ZERO_ADDRESS;
+    const currency = USDC_ADDRESS;
+    const proposedPrice = 1; // 1 USDC
+    const price = mockPrice;
 
-    const txEvent = createTransactionEvent({
-      receipt: {
-        logs: [
-          {
-            address: optimisticOracleAddress,
-            topics: [
-              proposePriceEventTopic,
-              ZERO_HASH, // requester
-              ZERO_HASH, // proposer
-            ],
-            data: '0x'.padEnd('1000', '0'), // TODO: build a proper data string for decoding
-          },
-        ],
+    // build a log that encodes the data for a ProposePrice event
+    // the agent will decode 'requester', 'proposer', 'proposedPrice', and 'currency' from the data
+    const log = createLog(
+      iface.getEvent('ProposePrice'),
+      {
+        requester,
+        proposer,
+        identifier: ZERO_HASH,
+        timestamp: 0,
+        ancillaryData: '0x00',
+        proposedPrice: proposedPrice * Math.pow(10, mockDecimals),
+        expirationTimestamp: 0,
+        currency,
       },
-    });
+      { address: optimisticOracleAddress },
+    );
+
+    // build a receipt
+    const receipt = createReceipt([log], ZERO_ADDRESS);
+    
+    const txEvent = createTransactionEvent({ receipt });
 
     handleTransaction = provideHandleTransaction(mockErc20Contract);
     const findings = await handleTransaction(txEvent);
@@ -147,28 +255,32 @@ describe('UMA optimistic oracle validation agent', () => {
   it('returns a finding if proposed price difference exceeds threshold', async () => {
     const requester = ZERO_ADDRESS;
     const proposer = ZERO_ADDRESS;
-    const currency = ZERO_ADDRESS;
-    const proposedPrice = 1;
-
-    mockPrice = 10;
+    const currency = USDC_ADDRESS;
+    const proposedPrice = 1.5;  // 1.5 USDC
     const price = mockPrice;
 
-    const txEvent = createTransactionEvent({
-      receipt: {
-        logs: [
-          {
-            address: optimisticOracleAddress,
-            topics: [
-              proposePriceEventTopic,
-              ZERO_HASH, // requester
-              ZERO_HASH, // proposer
-            ],
-            data: '0x'.padEnd('1000', '0'), // TODO: build a proper data string for decoding
-          },
-        ],
+    // build a log that encodes the data for a ProposePrice event
+    // the agent will decode 'requester', 'proposer', 'proposedPrice', and 'currency' from the data
+    const log = createLog(
+      iface.getEvent('ProposePrice'),
+      {
+        requester,
+        proposer,
+        identifier: ZERO_HASH,
+        timestamp: 0,
+        ancillaryData: '0x00',
+        proposedPrice: proposedPrice * Math.pow(10, mockDecimals),
+        expirationTimestamp: 0,
+        currency,
       },
-    });
+      { address: optimisticOracleAddress },
+    );
 
+    // build a receipt
+    const receipt = createReceipt([log], ZERO_ADDRESS);
+
+    const txEvent = createTransactionEvent({ receipt });
+    
     handleTransaction = provideHandleTransaction(mockErc20Contract);
     const findings = await handleTransaction(txEvent);
 
@@ -180,6 +292,7 @@ describe('UMA optimistic oracle validation agent', () => {
         alertId: 'AE-UMA-OO-PROPOSEPRICE',
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
+        protocol: 'uma',
         everestId: config.umaEverestId,
         metadata: {
           requester,
