@@ -1,5 +1,6 @@
 const deployerWatchAgent = require('./deployer-watch');
 const monitorMintCallsAgent = require('./monitor-mint-calls');
+const disputerAgent = require('./bot-handlers/disputer');
 
 const handleTransaction = async (txEvent) => {
   const findings = (
@@ -12,6 +13,17 @@ const handleTransaction = async (txEvent) => {
   return findings;
 };
 
+const handleBlock = async (blockEvent) => {
+  const findings = (
+    await Promise.all([
+      disputerAgent.handleBlock(blockEvent),
+    ])
+  ).flat();
+
+  return findings;
+};
+
 module.exports = {
   handleTransaction,
+  handleBlock,
 };

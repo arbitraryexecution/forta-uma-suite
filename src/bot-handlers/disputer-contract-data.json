@@ -1,0 +1,12 @@
+[
+  {
+    "financialContractAddress": "0x964Be01cCe200e168c4ba960a764cBEBa8C01200",
+    "priceFeedConfig": {
+      "type": "coingecko",
+      "contractAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "quoteCurrency": "usd",
+      "lookback": 0,
+      "minTimeBetweenUpdates": 10
+    }
+  }
+]
