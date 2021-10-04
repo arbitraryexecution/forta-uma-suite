@@ -1,6 +1,8 @@
 const {
   Finding, FindingSeverity, FindingType,
 } = require('forta-agent');
+
+// data to initialize contracts we are monitoring
 const contractData = require('./liquidator-contract-data.json');
 
 const {
@@ -11,7 +13,8 @@ const {
   initializeContracts, checkIsExpiredOrShutdown,
 } = require('./initialization');
 
-function createAlert(financialContractClient, position) {
+// formats provided data into a Forta alert
+function createAlert(financialContractClient, position, price) {
   return Finding.fromObject({
     name: `Liquidatable UMA position on contract ${financialContractClient.address}`,
     description: 'Position is under collateralized and can be liquidated',
@@ -19,46 +22,51 @@ function createAlert(financialContractClient, position) {
     severity: FindingSeverity.Medium,
     type: FindingType.Degraded,
     everestId: umaEverestId,
-    metadata: position,
+    metadata: { 
+      ...position,
+      tokenPrice: price.toString(),
+    }
   });
+}
+
+// checks financialContractClient for liquidatable positions
+async function checkIfLiquidatable({ financialContractClient, priceFeed }) {
+  // update price feed and financial contract
+  await Promise.all([
+    priceFeed.update(),
+    financialContractClient.update(),
+  ]);
+
+  // check if contract is expired
+  if (await checkIsExpiredOrShutdown(financialContractClient)) {
+    console.error(`contract ${financialContractClient.address} is expired/shut down`);
+    return [];
+  }
+
+  // grab current price
+  const price = await priceFeed.getCurrentPrice();
+
+  // get liquidatable positions
+  // eslint-disable-next-line max-len
+  const liquidatablePositions = await financialContractClient.getUnderCollateralizedPositions(price);
+
+  return liquidatablePositions.map(
+    (position) => createAlert(financialContractClient, position, price),
+  );
 }
 
 function provideHandleBlock(contracts) {
   return async function handleBlock() {
-    const findings = [];
-
     // iterate through each financial contract and check if it is liquidatable
     // awaiting contracts promise is a no op after it resolves the first time
-    (await contracts).forEach(async ({ financialContractClient, priceFeed }) => {
-      // check if contract is expired
-      console.log('iterating');
-      if (await checkIsExpiredOrShutdown(financialContractClient)) {
-        console.log('contract is expired/shut down');
-        return;
-      }
+    const promises = (await contracts).map((contract) => checkIfLiquidatable(contract));
 
-      // update price feed and financial contract
-      await Promise.all([
-        priceFeed.update(),
-        financialContractClient.update(),
-      ]);
-
-      // grab current price
-      const price = await priceFeed.getCurrentPrice();
-
-      // get liquidatable positions
-      const getLiquidatablePositions = financialContractClient.getUnderCollateralizedPositions;
-      const liquidatablePositions = await getLiquidatablePositions(price);
-
-      liquidatablePositions.forEach((position) => {
-        findings.push(createAlert(financialContractClient, position));
-      });
-    });
-    return findings;
+    return (await Promise.all(promises)).flat();
   };
 }
 
 module.exports = {
   provideHandleBlock,
   handleBlock: provideHandleBlock(initializeContracts(contractData)),
+  createAlert,
 };

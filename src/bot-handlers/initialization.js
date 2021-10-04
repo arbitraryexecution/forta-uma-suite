@@ -1,7 +1,7 @@
 // Helpers
 const { SUPPORTED_CONTRACT_VERSIONS, PublicNetworks } = require('@uma/common');
 
-// JS libs
+// UMA JS libs
 const {
   FinancialContractClient,
   Networker,
@@ -10,16 +10,16 @@ const {
   multicallAddressMap,
 } = require('@uma/financial-templates-lib');
 
+// Contract ABIs and network Addresses.
+const { getAbi, findContractVersion } = require('@uma/core');
+
 const {
   getJsonRpcUrl,
 } = require('forta-agent');
 
 const Web3 = require('web3');
 
-// Contract ABIs and network Addresses.
-const { getAbi, findContractVersion } = require('@uma/core');
-
-// initialize global constants TODO: ensure web3 is correct
+// initialize global constants, web3 gets populated on initialization
 const getTime = () => Math.round(new Date().getTime() / 1000);
 const web3 = new Web3(new Web3.providers.HttpProvider(getJsonRpcUrl()));
 
@@ -42,6 +42,8 @@ async function checkIsExpiredOrShutdown(financialContractClient) {
   return false;
 }
 
+// takes in a list of financial contract address and price feed config and returns a
+// list of { financialContractClient, priceFeed }
 async function processContractAndPriceFeed({ financialContractAddress, priceFeedConfig }) {
   // find contract version
   const detectedContract = await findContractVersion(financialContractAddress, web3);
@@ -75,8 +77,10 @@ async function processContractAndPriceFeed({ financialContractAddress, priceFeed
     financialContract.methods.tokenCurrency().call(),
   ]);
 
+  // Create instances of our tokens
   const collateralToken = new web3.eth.Contract(getAbi('ExpandedERC20'), collateralTokenAddress);
   const syntheticToken = new web3.eth.Contract(getAbi('ExpandedERC20'), syntheticTokenAddress);
+  // Get decimal data for tokens
   const [collateralDecimals, syntheticDecimals] = await Promise.all([
     collateralToken.methods.decimals().call(),
     syntheticToken.methods.decimals().call(),
@@ -96,7 +100,7 @@ async function processContractAndPriceFeed({ financialContractAddress, priceFeed
     throw new Error('Price feed config is invalid');
   }
 
-  // get network name
+  // Get network name
   const networkId = await web3.eth.net.getId();
   const networkName = PublicNetworks[Number(networkId)]
     ? PublicNetworks[Number(networkId)].name : null;
@@ -124,8 +128,11 @@ async function initializeContracts(financialContractData) {
   return Promise.all(
     financialContractData.map((entry) => processContractAndPriceFeed(entry)),
   ).catch((error) => console.error(error))
-  // filter out errored results TODO: needs to check for undefined
-    .then((entries) => entries.filter((entry) => entry));
+  // filter out errored results
+    .then((entries) => {
+      if(!entries) throw new Error("Initializer couldn't initialize any financial contracts.");
+      entries.filter((entry) => entry);
+    });
 }
 
 module.exports = {
