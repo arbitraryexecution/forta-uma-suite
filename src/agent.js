@@ -3,6 +3,17 @@ const adminEvents = require('./admin-events/admin-events');
 const deployerWatch = require('./deployer-watch/deployer-watch');
 const monitorMintCalls = require('./monitor-mint-calls/monitor-mint-calls');
 
+const handleTransaction = async (txEvent) => {
+  const findings = (
+    await Promise.all([
+      deployerWatchAgent.handleTransaction(txEvent),
+      monitorMintCallsAgent.handleTransaction(txEvent),
+    ])
+  ).flat();
+
+  return findings;
+};
+
 // block handlers
 const liquidator = require('./bot-handlers/liquidator');
 
