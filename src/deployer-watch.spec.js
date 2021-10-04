@@ -50,6 +50,7 @@ describe('watch deployer EOA', () => {
           severity: FindingSeverity.Low,
           type: FindingType.Unknown,
           everestId: config.umaEverestId,
+          protocol: 'uma',
           metadata: {
             to: whitelistedAddress,
             from: deployerAddress,
@@ -73,6 +74,7 @@ describe('watch deployer EOA', () => {
           severity: FindingSeverity.Low,
           type: FindingType.Unknown,
           everestId: config.umaEverestId,
+          protocol: 'uma',
           metadata: {
             to: '0xFAKEADDRESS',
             from: deployerAddress,
@@ -86,6 +88,7 @@ describe('watch deployer EOA', () => {
           severity: FindingSeverity.High,
           type: FindingType.Suspicious,
           everestId: config.umaEverestId,
+          protocol: 'uma',
           metadata: {
             to: '0xFAKEADDRESS',
             from: deployerAddress,
