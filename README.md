@@ -6,6 +6,7 @@ This agent monitors various aspects of UMA. The UMA suite currently contains
 the following handlers:
 
 - deployer-watch
+- liquidator
 - monitor-mint-calls
 
 ## Supported Chains
@@ -26,6 +27,12 @@ the following handlers:
   - Severity is always set to "high"
   - Type is always set to "suspicious"
   - Metadata field contains to and from addresses
+
+- AE-UMA-LIQUIDATABLE-POSITION
+  - Fired when a monitored contract has a liquidatable position due to price changes or invalid withdrawls
+  - Severity is always set to "medium"
+  - type is always set to "degraded"
+  - Metadata field contains position details and the returned price from the price feed
 
 - AE-UMA-UNAUTHORIZED-MINT
   - Fired when the UMA VotingToken.mint() method is called by any address other than the UMA Voting contract
