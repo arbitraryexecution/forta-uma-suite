@@ -3,6 +3,7 @@ module.exports = {
     commonjs: true,
     es2021: true,
     jest: true,
+    mocha: true,
     node: true,
   },
   extends: [
@@ -20,6 +21,7 @@ module.exports = {
       rules: {
         'no-plusplus': 'off',
         'no-continue': 'off',
+        'import/no-extraneous-dependencies': ["error", {"devDependencies": true}],
       },
     },
   ],
