@@ -22,10 +22,10 @@ function createAlert(financialContractClient, position, price) {
     severity: FindingSeverity.Medium,
     type: FindingType.Degraded,
     everestId: umaEverestId,
-    metadata: { 
+    metadata: {
       ...position,
       tokenPrice: price.toString(),
-    }
+    },
   });
 }
 

@@ -130,7 +130,7 @@ async function initializeContracts(financialContractData) {
   ).catch((error) => console.error(error))
   // filter out errored results
     .then((entries) => {
-      if(!entries) throw new Error("Initializer couldn't initialize any financial contracts.");
+      if (!entries) throw new Error("Initializer couldn't initialize any financial contracts.");
       entries.filter((entry) => entry);
     });
 }
