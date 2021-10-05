@@ -16,11 +16,11 @@ describe('agents', () => {
   };
 
   beforeAll(() => {
-    handleTransaction = provideHandleTransaction(
+    handleTransaction = provideHandleTransaction([
       mockAdminEventsAgent,
       mockDeployerWatchAgent,
       mockMonitorMintCallsAgent,
-    );
+    ]);
   });
 
   describe('handleTransaction', () => {
