@@ -1,5 +1,6 @@
 const ethers = require('ethers');
 const axios = require('axios');
+const BigNumber = require('bignumber.js');
 const { getAbi, getAddress } = require('@uma/contracts-node');
 const {
   Finding, FindingSeverity, FindingType, createTransactionEvent,
@@ -27,7 +28,7 @@ const iface = new ethers.utils.Interface(optimisticOracleAbi);
 jest.mock('axios');
 
 // token address must be lowercase
-const mockPrice = 1;
+const mockPrice = '1';
 const mockCoinGeckoResponseUSDC = {
   status: 200,
   statusText: 'OK',
@@ -202,7 +203,7 @@ describe('UMA optimistic oracle validation agent', () => {
         metadata: {
           requester,
           currency,
-          price,
+          price: price.toString(),
         },
       }),
     ]);
@@ -212,7 +213,7 @@ describe('UMA optimistic oracle validation agent', () => {
     const requester = ZERO_ADDRESS;
     const proposer = ZERO_ADDRESS;
     const currency = USDC_ADDRESS;
-    const proposedPrice = 1; // 1 USDC
+    const proposedPrice = '1'; // 1 USDC
 
     axios.get.mockResolvedValue(mockCoinGeckoResponseUSDC);
 
@@ -249,7 +250,7 @@ describe('UMA optimistic oracle validation agent', () => {
     const requester = ZERO_ADDRESS;
     const proposer = ZERO_ADDRESS;
     const currency = USDC_ADDRESS;
-    const proposedPrice = 1.5; // 1.5 USDC
+    const proposedPrice = '1.5'; // 1.5 USDC
     const price = mockPrice;
     const { priceThresholdPct } = config.optimisticOracle;
 
@@ -294,8 +295,8 @@ describe('UMA optimistic oracle validation agent', () => {
           requester,
           proposer,
           currency,
-          proposedPrice,
-          price,
+          proposedPrice: proposedPrice.toString(),
+          price: price.toString(),
           priceThresholdPct,
         },
       }),

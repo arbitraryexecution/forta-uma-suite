@@ -88,10 +88,10 @@ async function getPrice(contractAddress) {
 
   const price = response.data[tokenAddress][vsCurrency];
 
-  return parseFloat(price);
+  return new BigNumber(price);
 }
 
-function provideHandleTransaction(erc20MockContract = undefined) {
+function provideHandleTransaction(erc20MockContract) {
   return async function handleTransaction(txEvent) {
     const findings = [];
 
@@ -142,7 +142,7 @@ function provideHandleTransaction(erc20MockContract = undefined) {
           metadata: {
             requester,
             currency,
-            price,
+            price: price.toString(),
           },
         }));
       }
@@ -164,11 +164,8 @@ function provideHandleTransaction(erc20MockContract = undefined) {
 
         const decimals = await erc20Contract.decimals();
 
-        // convert proposedPrice to a human-readable decimal value
-        const proposedPrice = parseFloat(ethers.utils.formatUnits(proposedPriceRaw, decimals));
-
         // convert the proposedPrice to a BigNumber type for difference calculations later
-        const proposedPriceBN = new BigNumber(proposedPrice.toString());
+        const proposedPrice = new BigNumber(ethers.utils.formatUnits(proposedPriceRaw, decimals));
 
         // make a request to the price feed API
         // CoinGecko will return decimal values
@@ -180,12 +177,9 @@ function provideHandleTransaction(erc20MockContract = undefined) {
           continue;
         }
 
-        // convert the price obtained to a BigNumber type
-        const priceBN = new BigNumber(price);
-
         // generate a finding if the price difference threshold (defined in agent-config.json) has
         // been exceeded
-        const percentError = calculatePercentError(proposedPriceBN, priceBN);
+        const percentError = calculatePercentError(proposedPrice, price);
         const { priceThresholdPct } = config.optimisticOracle;
 
         if (percentError.isGreaterThan(priceThresholdPct)) {
@@ -201,8 +195,8 @@ function provideHandleTransaction(erc20MockContract = undefined) {
               requester,
               proposer,
               currency,
-              proposedPrice,
-              price,
+              proposedPrice: proposedPrice.toString(),
+              price: price.toString(),
               priceThresholdPct,
             },
           }));
