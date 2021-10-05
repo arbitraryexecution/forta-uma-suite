@@ -11,7 +11,8 @@ const {
 } = require('@uma/financial-templates-lib');
 
 // Contract ABIs and network Addresses.
-const { getAbi, findContractVersion } = require('@uma/core');
+const { findContractVersion } = require('@uma/core');
+const { getAbi } = require('@uma/contracts-node');
 
 const {
   getJsonRpcUrl,
@@ -125,14 +126,15 @@ async function initializeContracts(financialContractData) {
   logger.silent = true;
 
   // process each financial contract in our config list
-  return Promise.all(
+  const contracts = Promise.all(
     financialContractData.map((entry) => processContractAndPriceFeed(entry)),
   ).catch((error) => console.error(error))
   // filter out errored results
     .then((entries) => {
       if (!entries) throw new Error("Initializer couldn't initialize any financial contracts.");
-      entries.filter((entry) => entry);
+      return entries.filter((entry) => entry);
     });
+  return contracts;
 }
 
 module.exports = {
