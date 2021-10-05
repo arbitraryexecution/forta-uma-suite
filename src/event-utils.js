@@ -1,4 +1,4 @@
-/* eventutils.js
+/* event-utils.js
    Contains helper functions for encoding log data and receipts.
 */
 

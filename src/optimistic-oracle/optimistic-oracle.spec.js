@@ -123,7 +123,7 @@ describe('UMA optimistic oracle validation agent', () => {
     expect(findings).toStrictEqual([]);
   });
 
-  it('returns no finding if coingecko fails to respond to a price request', async () => {
+  it('returns no finding if CoinGecko fails to respond to a price request', async () => {
     const requester = ZERO_ADDRESS;
     const currency = USDC_ADDRESS;
 
@@ -251,6 +251,7 @@ describe('UMA optimistic oracle validation agent', () => {
     const currency = USDC_ADDRESS;
     const proposedPrice = 1.5; // 1.5 USDC
     const price = mockPrice;
+    const { priceThresholdPct } = config.optimisticOracle;
 
     axios.get.mockResolvedValue(mockCoinGeckoResponseUSDC);
 
@@ -293,8 +294,9 @@ describe('UMA optimistic oracle validation agent', () => {
           requester,
           proposer,
           currency,
-          proposedPrice: proposedPrice.toString(),
-          price: price.toString(),
+          proposedPrice,
+          price,
+          priceThresholdPct,
         },
       }),
     ]);

@@ -65,7 +65,7 @@ Events we are interested in:
 */
 const eventNames = ['RequestPrice', 'ProposePrice'];
 
-// calculate the % difference between 2 values
+// calculate the % difference between 2 BigNumber values
 function calculatePercentError(first, second) {
   const delta = first.minus(second).absoluteValue();
   return delta.div(first).multipliedBy(100);
@@ -103,10 +103,10 @@ async function getPrice(contractAddress) {
 
   const price = response.data[tokenAddress][vsCurrency];
 
-  return price;
+  return parseFloat(price);
 }
 
-function provideHandleTransaction(erc20Contract) {
+function provideHandleTransaction(erc20Contract = undefined) {
   return async function handleTransaction(txEvent) {
     const findings = [];
 
@@ -163,9 +163,7 @@ function provideHandleTransaction(erc20Contract) {
       }
 
       if (log.name === 'ProposePrice') {
-        const { currency } = log.args;
-        const { requester } = log.args;
-        const { proposer } = log.args;
+        const { currency, requester, proposer, proposedPrice: proposedPriceRaw } = log.args;
 
         // set up ERC-20 contract to get decimals value
         // in production, erc20Contract will always be undefined
@@ -179,29 +177,31 @@ function provideHandleTransaction(erc20Contract) {
         const decimals = await erc20Contract.decimals();
 
         // convert proposedPrice to a human-readable decimal value
-        let proposedPrice = ethers.utils.formatUnits(log.args.proposedPrice, decimals);
+        const proposedPrice = parseFloat(ethers.utils.formatUnits(proposedPriceRaw, decimals));
 
         // convert the proposedPrice to a BigNumber type for difference calculations later
-        proposedPrice = new BigNumber(proposedPrice.toString());
+        const proposedPriceBN = new BigNumber(proposedPrice.toString());
 
         // make a request to the price feed API
         // CoinGecko will return decimal values
         let price;
         try {
           price = await getPrice(currency);
+          
         } catch (error) {
           console.error(error);
           continue;
         }
 
         // convert the price obtained to a BigNumber type
-        price = new BigNumber(price);
+        const priceBN = new BigNumber(price);
 
         // generate a finding if the price difference threshold (defined in agent-config.json) has
         // been exceeded
-        const percentError = calculatePercentError(proposedPrice, price);
+        const percentError = calculatePercentError(proposedPriceBN, priceBN);
+        const { priceThresholdPct } = config.optimisticOracle;
 
-        if (percentError.isGreaterThan(config.optimisticOracle.priceThresholdPct)) {
+        if (percentError.isGreaterThan(priceThresholdPct)) {
           findings.push(Finding.fromObject({
             name: 'UMA Price Proposal',
             description: `Price proposed to Optimistic Oracle is disputable. Currency=${currency}, ProposedPrice=${proposedPrice}, Price=${price}`,
@@ -214,8 +214,9 @@ function provideHandleTransaction(erc20Contract) {
               requester,
               proposer,
               currency,
-              proposedPrice: proposedPrice.toString(),
-              price: price.toString(),
+              proposedPrice,
+              price,
+              priceThresholdPct,
             },
           }));
         }
@@ -228,5 +229,5 @@ function provideHandleTransaction(erc20Contract) {
 
 module.exports = {
   provideHandleTransaction,
-  handleTransaction: provideHandleTransaction(undefined),
+  handleTransaction: provideHandleTransaction(),
 };

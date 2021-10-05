@@ -60,11 +60,20 @@ the following handlers:
   - Fired when the ProposePrice event is emitted by the Optimistic Oracle contract
   - Severity is always set to "low"
   - Type is always set to "unknown"
-  - Metadata field contains requester, proposer, currency, proposed price, and price
+  - Metadata field contains requester, proposer, currency, proposed price, price, and the threshold
+    percentage that triggered the event
     - Requester and proposer are EOAs decoded from the event
     - Currency is the ERC-20 token address decoded from the event
     - Proposed price is decoded from the event, then adjusted to be denominated in USD
     - Price is obtained for the token address from an external price feed (CoinGecko)
+    - Threshold is obtained from agent-config.json
+
+## Agent Configuration
+
+The agent-config.json file contains user-configurable agent settings.
+
+- priceThesholdPct: Sets the percent difference between proposed price and actual price that will
+trigger the AE-UMA-OO-PROPOSEPRICE alert
 
 ## Test Data
 
