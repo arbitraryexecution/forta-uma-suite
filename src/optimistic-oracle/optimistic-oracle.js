@@ -9,28 +9,13 @@ const {
 // load agent configuration
 const config = require('../../agent-config.json');
 
-// provide ABI for ERC-20 decimals() function
-const erc20Abi = [
-  {
-    constant: true,
-    inputs: [],
-    name: 'decimals',
-    outputs: [
-      {
-        name: '',
-        type: 'uint8',
-      },
-    ],
-    payable: false,
-    stateMutability: 'view',
-    type: 'function',
-  },
-];
-
 const CHAIN_ID = 1; // mainnet
 
 // stores the optimistic oracle contract address
 let optimisticOracleAddress;
+
+// provide ABI for ERC-20 decimals() function
+const erc20Abi = getAbi('ERC20');
 
 // create ethers interface object
 const optimisticOracleAbi = getAbi('OptimisticOracle');
@@ -106,7 +91,7 @@ async function getPrice(contractAddress) {
   return parseFloat(price);
 }
 
-function provideHandleTransaction(erc20Contract = undefined) {
+function provideHandleTransaction(erc20MockContract = undefined) {
   return async function handleTransaction(txEvent) {
     const findings = [];
 
@@ -163,16 +148,19 @@ function provideHandleTransaction(erc20Contract = undefined) {
       }
 
       if (log.name === 'ProposePrice') {
-        const { currency, requester, proposer, proposedPrice: proposedPriceRaw } = log.args;
+        const {
+          currency, requester, proposer, proposedPrice: proposedPriceRaw,
+        } = log.args;
+        let erc20Contract;
 
         // set up ERC-20 contract to get decimals value
         // in production, erc20Contract will always be undefined
         // in testing, erc20Contract will be assigned to a mock contract
-        /* eslint-disable no-param-reassign */
-        if (erc20Contract === undefined) {
+        if (erc20MockContract === undefined) {
           erc20Contract = new ethers.Contract(currency, erc20Abi, provider);
+        } else {
+          erc20Contract = erc20MockContract;
         }
-        /* eslint-enable no-param-reassign */
 
         const decimals = await erc20Contract.decimals();
 
@@ -187,7 +175,6 @@ function provideHandleTransaction(erc20Contract = undefined) {
         let price;
         try {
           price = await getPrice(currency);
-          
         } catch (error) {
           console.error(error);
           continue;
