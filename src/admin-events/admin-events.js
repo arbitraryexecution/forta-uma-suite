@@ -10,7 +10,7 @@ const adminEvents = require('./admin-events.json');
 function getEvents(contractName) {
   const events = adminEvents[contractName];
   if (events === undefined) {
-    return []; // no events for this contract
+    return {}; // no events for this contract
   }
   return events;
 }
