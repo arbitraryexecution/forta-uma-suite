@@ -50,9 +50,9 @@ the following handlers:
   - Fired when the RequestPrice event is emitted by the Optimistic Oracle contract
   - Severity is always set to "low"
   - Type is always set to "unknown"
-  - Metadata field contains requester, currency, and price
+  - Metadata field contains requester, identifier, and price
     - Requester is an EOA decoded from the event
-    - Currency is the ERC-20 token address decoded from the event
+    - Identifier is the string representation of the asset
     - Price is obtained for the token address from an external price feed (CoinGecko)
 
 <!-- -->
@@ -60,10 +60,10 @@ the following handlers:
   - Fired when the ProposePrice event is emitted by the Optimistic Oracle contract
   - Severity is always set to "low"
   - Type is always set to "unknown"
-  - Metadata field contains requester, proposer, currency, proposed price, price, and the threshold
+  - Metadata field contains requester, proposer, identifier, proposed price, price, and the threshold
     percentage that triggered the event
     - Requester and proposer are EOAs decoded from the event
-    - Currency is the ERC-20 token address decoded from the event
+    - Identifier is the string representation of the asset
     - Proposed price is decoded from the event, then adjusted to be denominated in USD
     - Price is obtained for the token address from an external price feed (CoinGecko)
     - Threshold is obtained from agent-config.json
@@ -74,6 +74,10 @@ The agent-config.json file contains user-configurable agent settings.
 
 - disputePriceErrorPercent: Sets the percent difference between proposed price and actual price that
   will trigger the AE-UMA-OO-PROPOSEPRICE alert (default value = 0.05, or 5%)
+- cryptoWatchApiKey: API key for Cryptowatch price feeds
+- defipulseApiKey: API key for Defi Pulse price feeds
+- tradermadeApiKey: API key for TraderMade price feeds
+- cmcApiKey: API key for CoinMarketCap price feeds
 
 ## Test Data
 

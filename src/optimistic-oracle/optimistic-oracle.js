@@ -16,7 +16,18 @@ const {
 } = require('@uma/financial-templates-lib');
 
 // load agent configuration
-const config = require('../../agent-config.json');
+const {
+  umaEverestId: UMA_EVEREST_ID,
+  optimisticOracle: optimisticOracleConfig,
+} = require('../../agent-config.json');
+
+const {
+  disputePriceErrorPercent,
+  cryptowatchApiKey: CRYPTOWATCH_API_KEY,
+  defipulseApiKey: DEFIPULSE_API_KEY,
+  tradermadeApiKey: TRADERMADE_API_KEY,
+  cmcApiKey: CMC_API_KEY,
+} = optimisticOracleConfig;
 
 const CHAIN_ID = 1; // mainnet
 
@@ -83,21 +94,40 @@ function bytes32ToString(identifier) {
   return idString;
 }
 
-// Get the price of an asset based on the UMA identifier string.
-// Example identifiers: "BTC-BASIS-3M/USDC", "STABLESPREAD/USDC_18DEC"
-// This identifier will be used as a lookup in DefaultPriceFeedConfigs.ts in the UMA lib
-async function getPrice(identifier) {
-  const priceFeed = await createReferencePriceFeedForFinancialContract(
+// creates a price feed using the UMA library
+async function createPriceFeed({ identifier, config }) {
+  return createReferencePriceFeedForFinancialContract(
     logger,
     web3,
-    new Networker(logger),
+    new Networker(),
     getTime,
     undefined, // no address needed since we're passing identifier explicitly
-    { lookback: 0 }, // config
+    config,
     identifier,
   );
+}
 
-  if (priceFeed === null) {
+// get the price of an asset based on the UMA identifier string
+//
+// example identifiers: "BTC-BASIS-3M/USDC", "STABLESPREAD/USDC_18DEC"
+// this identifier will be used as a lookup in DefaultPriceFeedConfigs.ts in the UMA lib
+async function getPrice(identifier) {
+  const args = {
+    identifier,
+    config: {
+      cryptowatchApiKey: CRYPTOWATCH_API_KEY,
+      defipulseApiKey: DEFIPULSE_API_KEY,
+      tradermadeApiKey: TRADERMADE_API_KEY,
+      cmcApiKey: CMC_API_KEY,
+    },
+  };
+
+  let priceFeed = await createPriceFeed(args).catch();
+  if (!priceFeed) {
+    args.config.lookback = 0;
+    priceFeed = await createPriceFeed(args);
+  }
+  if (!priceFeed) {
     throw Error(`Unable to create price feed for identifier '${identifier}'`);
   }
 
@@ -156,7 +186,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
           severity: FindingSeverity.Low,
           type: FindingType.Unknown,
           protocol: 'uma',
-          everestId: config.umaEverestId,
+          everestId: UMA_EVEREST_ID,
           metadata: {
             requester,
             identifier: idString,
@@ -187,7 +217,6 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
         // generate a finding if the price difference threshold (defined in agent-config.json) has
         // been exceeded
         const percentError = calculatePercentError(proposedPrice, price);
-        const { disputePriceErrorPercent } = config.optimisticOracle;
 
         if (percentError.isGreaterThan(disputePriceErrorPercent * 100)) {
           findings.push(Finding.fromObject({
@@ -197,7 +226,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
             severity: FindingSeverity.Low,
             type: FindingType.Unknown,
             protocol: 'uma',
-            everestId: config.umaEverestId,
+            everestId: UMA_EVEREST_ID,
             metadata: {
               requester,
               proposer,
@@ -218,4 +247,5 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
 module.exports = {
   provideHandleTransaction,
   handleTransaction: provideHandleTransaction(),
+  createPriceFeed,
 };

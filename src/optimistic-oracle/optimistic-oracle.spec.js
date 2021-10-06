@@ -3,13 +3,24 @@ const { getAbi, getAddress } = require('@uma/contracts-node');
 const {
   Finding, FindingSeverity, FindingType, createTransactionEvent,
 } = require('forta-agent');
-const { provideHandleTransaction } = require('./optimistic-oracle');
+const { provideHandleTransaction, createPriceFeed } = require('./optimistic-oracle');
 
 // load functions from event manipulation library
 const { createLog, createReceipt } = require('../event-utils');
 
 // load agent configuration
-const config = require('../../agent-config.json');
+const {
+  umaEverestId: UMA_EVEREST_ID,
+  optimisticOracle: optimisticOracleConfig,
+} = require('../../agent-config.json');
+
+const {
+  disputePriceErrorPercent,
+  cryptowatchApiKey: CRYPTOWATCH_API_KEY,
+  defipulseApiKey: DEFIPULSE_API_KEY,
+  tradermadeApiKey: TRADERMADE_API_KEY,
+  cmcApiKey: CMC_API_KEY,
+} = optimisticOracleConfig;
 
 // constant values
 const CHAIN_ID = 1; // mainnet
@@ -45,6 +56,106 @@ async function mockGetPriceBadResponse(identifier) {
 describe('UMA optimistic oracle validation agent', () => {
   let handleTransaction;
   let optimisticOracleAddress = null;
+
+  it('should create price feeds for supported assets w/o throwing any exceptions', async () => {
+    // supported list of assets
+    const idList = [
+      'ETH/BTC',
+      'COMP/USD',
+      'COMPUSD',
+      'USDETH',
+      'ETHUSD',
+      'USDBTC',
+      'BTCUSD',
+      'USDPERL',
+      'BCHNBTC',
+      'STABLESPREAD',
+      'STABLESPREAD/USDC',
+      'STABLESPREAD/BTC',
+      'ELASTIC_STABLESPREAD/USDC',
+      'GASETH-TWAP-1Mx1M',
+      'GASETH-FEB21',
+      'GASETH-MAR21',
+      'COMPUSDC-APR-MAR28/USDC',
+      'BTCDOM',
+      'ALTDOM',
+      'AMPLUSD',
+      'DEFI_PULSE_TOTAL_TVL',
+      'DEFI_PULSE_SUSHI_TVL',
+      'DEFI_PULSE_UNISWAP_TVL',
+      'SUSHIUNI',
+      'CNYUSD',
+      'EURUSD',
+      'PHPDAI',
+      'ETH-BASIS-6M/USDC',
+      'ETH-BASIS-3M/USDC',
+      'BTC-BASIS-6M/USDC',
+      'BTC-BASIS-3M/USDC',
+      'USD/bBadger',
+      'USD-[bwBTC/ETH SLP]',
+      'XAUPERL',
+      'XAUUSD',
+      'uSTONKS_APR21',
+      'DIGGBTC',
+      'DIGGETH',
+      'DIGGUSD',
+      'USDAAVE',
+      'AAVEUSD',
+      'USDLINK',
+      'LINKUSD',
+      'USDSNX',
+      'SNXUSD',
+      'USDUMA',
+      'UMAUSD',
+      'USDUNI',
+      'UNIUSD',
+      'USDOCEAN',
+      'OCEANUSD',
+      'USDBTC_18DEC',
+      'STABLESPREAD/USDC_18DEC',
+      'BCHNBTC_18DEC',
+      'ETHBTC_FR',
+      'BALUSD',
+      'XSUSHIUSD',
+      'uSTONKS_JUN21',
+      'PUNKETH_TWAP',
+      'USDXIO',
+      'iFARMUSD',
+      'USDiFARM',
+      'USDDEXTF',
+      'DEXTFUSD',
+      'uSTONKS_0921',
+      // 'ibBTC/BTC',
+      // 'BTC/ibBTC',
+      // 'ibBTC/USD',
+      // 'USD/ibBTC',
+      'GASETH-0921',
+    ];
+
+    /* eslint-disable no-await-in-loop */
+    for (let i = 0; i < idList.length; i++) {
+      const identifier = idList[i];
+      const args = {
+        identifier,
+        config: {
+          cryptowatchApiKey: CRYPTOWATCH_API_KEY,
+          defipulseApiKey: DEFIPULSE_API_KEY,
+          tradermadeApiKey: TRADERMADE_API_KEY,
+          cmcApiKey: CMC_API_KEY,
+        },
+      };
+
+      let priceFeed = await createPriceFeed(args).catch();
+      if (!priceFeed) {
+        args.config.lookback = 0;
+        priceFeed = await createPriceFeed(args);
+      }
+      if (!priceFeed) {
+        throw Error(`Unable to create price feed for identifier '${identifier}'`);
+      }
+    }
+    /* eslint-enable no-await-in-loop */
+  });
 
   it('returns an empty finding if contract address does not match', async () => {
     // get the optimistic oracle address (this will be used in all tests)
@@ -165,7 +276,7 @@ describe('UMA optimistic oracle validation agent', () => {
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
         protocol: 'uma',
-        everestId: config.umaEverestId,
+        everestId: UMA_EVEREST_ID,
         metadata: {
           requester,
           identifier: idString,
@@ -214,7 +325,6 @@ describe('UMA optimistic oracle validation agent', () => {
     const idString = 'BTC-BASIS-3M/USDC';
     const proposedPrice = '110000000000000000000';
     const price = MOCK_PRICE;
-    const { disputePriceErrorPercent } = config.optimisticOracle;
 
     // build a log that encodes the data for a ProposePrice event
     // the agent will decode 'identifier', 'requester', 'proposer', 'proposedPrice' from the data
@@ -249,7 +359,7 @@ describe('UMA optimistic oracle validation agent', () => {
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
         protocol: 'uma',
-        everestId: config.umaEverestId,
+        everestId: UMA_EVEREST_ID,
         metadata: {
           requester,
           proposer,
