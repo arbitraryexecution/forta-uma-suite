@@ -9,12 +9,10 @@ const {
   initializeContracts,
 } = require('./initialization');
 
-// Helpers we may or may not need
+// web3 helpers
 const {
-  fromWei,
   toWei,
   toBN,
-  utf8ToHex,
 } = web3.utils;
 
 function createAlert(price, scaledPrice, liquidation) {
@@ -44,7 +42,7 @@ const defaultConfig = {
     isValid: (x) => x >= 0,
   },
   txnGasLimit: {
-    value: 9000000, // Can see recent averages here: https://etherscan.io/chart/gaslimit
+    value: 9000000, // can see recent averages here: https://etherscan.io/chart/gaslimit
     isValid: (x) => x >= 6000000 && x < 15000000,
   },
   contractType: {
@@ -58,6 +56,7 @@ const defaultConfig = {
 };
 
 function provideHandleBlock(contracts) {
+  // eslint-disable-next-line no-unused-vars
   return async function handleBlock(blockEvent) {
     const findings = [];
     const financialContracts = await contracts;
@@ -70,35 +69,39 @@ function provideHandleBlock(contracts) {
 
       // get the latest disputable liquidations from the client.
       const undisputedLiquidations = financialContractClient.getUndisputedLiquidations();
+      // eslint-disable-next-line no-unused-vars
       const disputableLiquidationsWithPrices = (
         await Promise.all(
           undisputedLiquidations.map(async (liquidation) => {
-            const liquidationTime = parseInt(liquidation.liquidationTime.toString());
-            const historicalLookbackWindow = Number(priceFeed.getLastUpdateTime()) - Number(priceFeed.getLookback());
+            const liquidationTime = parseInt(liquidation.liquidationTime.toString(), 10);
+            const lookback = priceFeed.getLookback();
+            const historicalLookbackWindow = priceFeed.getLastUpdateTime() - lookback;
 
             if (liquidationTime < historicalLookbackWindow) {
-              //console.error('Cannot dispute: liquidation time before earliest price feed historical timestamp');
+              // console.error('Liquidation time before earliest price feed historical timestamp');
               return null;
             }
-            // Get the historic price at the liquidation time.
+            // get the historic price at the liquidation time.
             let price;
             try {
               price = await priceFeed.getHistoricalPrice(liquidationTime);
             } catch (error) {
-              //console.error('could not get historical price');
+              // console.error('could not get historical price');
             }
             if (!price) return null;
-            // Price is available, use it to determine if the liquidation is disputable
+            // price is available, use it to determine if the liquidation is disputable
 
             const scaledPrice = price
-              .mul(toBN(toWei("1")).add(toBN(toWei(defaultConfig.crThreshold.value.toString()))))
-              .div(toBN(toWei("1")));
+              .mul(toBN(toWei('1')).add(toBN(toWei(defaultConfig.crThreshold.value.toString()))))
+              .div(toBN(toWei('1')));
+
+            const timeAndDelay = liquidationTime + defaultConfig.disputeDelay.value;
             if (
-              scaledPrice &&
-              financialContractClient.isDisputable(liquidation, scaledPrice) &&
-              financialContractClient.getLastUpdateTime() >= Number(liquidationTime) + defaultConfig.disputeDelay.value
+              scaledPrice
+              && financialContractClient.isDisputable(liquidation, scaledPrice)
+              && financialContractClient.getLastUpdateTime() >= timeAndDelay
             ) {
-              // Here is where the finding should be
+              // here is where the finding should be
               findings.push(createAlert(price, scaledPrice, liquidation));
             }
             return null;

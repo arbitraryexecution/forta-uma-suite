@@ -34,6 +34,12 @@ the following handlers:
   - Metadata field contains VotingToken contract address, caller address, and transaction hash
   - Must have traces enabled for this to operate correctly
 
+- AE-UMA-DISPUTE
+  - Fired when a liquidation can be disputed
+  - Severity is always "medium"
+  - Type is always set to "suspicious"
+  - Metadata field contains position price, scaled price, and liquidation data
+
 ## Test Data
 
 To run all the tests for this agent, use the following command: `npm run test`

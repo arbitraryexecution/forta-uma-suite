@@ -11,7 +11,7 @@
     "range": "forta-agent run --range",
     "file": "forta-agent run --file",
     "publish": "forta-agent publish",
-    "test": "mocha ./src/bot-handlers/tests/disputer-test.js && jest"
+    "test": "mocha ./src/bot-handlers/tests/*-test.js && jest"
   },
   "dependencies": {
     "@uma/common": "^2.7.0",
@@ -37,6 +37,7 @@
     "jest": "^27.0.6",
     "mocha": "^9.1.2",
     "nodemon": "^2.0.8",
-    "sinon": "^11.1.2"
+    "sinon": "^11.1.2",
+    "winston": "^3.3.3"
   }
 }
