@@ -1,10 +1,19 @@
 const ethers = require('ethers');
-const axios = require('axios');
 const BigNumber = require('bignumber.js');
-const { getAbi, getAddress } = require('@uma/contracts-node');
+const Web3 = require('web3');
 const {
   Finding, FindingSeverity, FindingType, getJsonRpcUrl,
 } = require('forta-agent');
+
+// contract ABIs and network addresses
+const { getAbi, getAddress } = require('@uma/contracts-node');
+
+// UMA library functions
+const {
+  Networker,
+  Logger: logger,
+  createReferencePriceFeedForFinancialContract,
+} = require('@uma/financial-templates-lib');
 
 // load agent configuration
 const config = require('../../agent-config.json');
@@ -14,15 +23,15 @@ const CHAIN_ID = 1; // mainnet
 // stores the optimistic oracle contract address
 let optimisticOracleAddress;
 
-// provide ABI for ERC-20 decimals() function
-const erc20Abi = getAbi('ERC20');
+logger.silent = true;
+
+// initialize global constants, web3 gets populated on initialization
+const getTime = () => Math.round(new Date().getTime() / 1000);
+const web3 = new Web3(new Web3.providers.HttpProvider(getJsonRpcUrl()));
 
 // create ethers interface object
 const optimisticOracleAbi = getAbi('OptimisticOracle');
 const iface = new ethers.utils.Interface(optimisticOracleAbi);
-
-// set up provider for read-only contract queries
-const provider = new ethers.providers.JsonRpcProvider(getJsonRpcUrl());
 
 /*
 Events we are interested in:
@@ -56,42 +65,49 @@ function calculatePercentError(first, second) {
   return delta.div(first).multipliedBy(100);
 }
 
-// get an ERC-20 token price using the CoinGecko API
-// free tier is limited to 50 calls/minute
-// see https://coingecko.com/en/api/documentation for more information
-async function getPrice(contractAddress) {
-  const baseUrl = 'https://api.coingecko.com/api/v3/simple/token_price/';
-  const id = 'ethereum';
-  const vsCurrency = 'usd';
-  // contractAddress must be checksum encoded
-  const requestUrl = `${baseUrl + id}?contract_addresses=${contractAddress}&vs_currencies=${vsCurrency}`;
-
-  const response = await axios.get(requestUrl);
-
-  // check that we got a valid response
-  if (response.status !== 200) {
-    throw new Error(`Error getting response from CoinGecko (status=${response.status})`);
-  }
-
-  // check that we got data for this token address
-  if (Object.keys(response.data).length === 0) {
-    throw new Error(`CoinGecko returned no data for token '${contractAddress}'`);
-  }
-
-  // in the response data, the token address key is NOT checksum encoded
-  const tokenAddress = contractAddress.toLowerCase();
-
-  // check that the currency denomination we requested is supported
-  if (!(Object.prototype.hasOwnProperty.call(response.data[tokenAddress], vsCurrency))) {
-    throw new Error(`CoinGecko has no data for token '${tokenAddress}' vs currency '${vsCurrency}'`);
-  }
-
-  const price = response.data[tokenAddress][vsCurrency];
-
-  return new BigNumber(price);
+// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
-function provideHandleTransaction(erc20MockContract) {
+function replaceAll(str, match, replacement) {
+  return str.replace(new RegExp(escapeRegExp(match), 'g'), () => replacement);
+}
+
+// decodes a bytes32 value to an ascii string
+function bytes32ToString(identifier) {
+  let idString = Buffer.from(identifier.slice(2), 'hex').toString();
+
+  // strip off trailing zeros after conversion
+  idString = replaceAll(idString, '\u0000', '');
+  return idString;
+}
+
+// Get the price of an asset based on the UMA identifier string.
+// Example identifiers: "BTC-BASIS-3M/USDC", "STABLESPREAD/USDC_18DEC"
+// This identifier will be used as a lookup in DefaultPriceFeedConfigs.ts in the UMA lib
+async function getPrice(identifier) {
+  const priceFeed = await createReferencePriceFeedForFinancialContract(
+    logger,
+    web3,
+    new Networker(logger),
+    getTime,
+    undefined, // no address needed since we're passing identifier explicitly
+    { lookback: 0 }, // config
+    identifier,
+  );
+
+  if (priceFeed === null) {
+    throw Error(`Unable to create price feed for identifier '${identifier}'`);
+  }
+
+  await priceFeed.update();
+  const price = (await priceFeed.getCurrentPrice()).toString();
+
+  return price;
+}
+
+function provideHandleTransaction(getPriceFunc = getPrice) {
   return async function handleTransaction(txEvent) {
     const findings = [];
 
@@ -118,22 +134,24 @@ function provideHandleTransaction(erc20MockContract) {
     for (let i = 0; i < parsedLogs.length; i++) {
       const log = parsedLogs[i];
       if (log.name === 'RequestPrice') {
-        // get token address (this will be checksum encoded)
-        const { currency, requester } = log.args;
+        const { identifier, requester } = log.args;
 
-        // make a request to the price feed API
+        // decode the identifer to determine which price feed to use
+        const idString = bytes32ToString(identifier);
+
+        // lookup the price
         let price;
         try {
-          price = await getPrice(currency);
-        } catch (error) {
-          console.error(error);
+          price = await getPriceFunc(idString);
+        } catch (err) {
+          console.error(err);
           continue;
         }
 
         // report the price obtained as a finding
         findings.push(Finding.fromObject({
           name: 'UMA Price Request',
-          description: `Price requested from Optimistic Oracle.  Currency=${currency}, Price=${price}`,
+          description: `Price requested from Optimistic Oracle.  Identifier=${idString}, Price=${price}`,
           alertId: 'AE-UMA-OO-REQUESTPRICE',
           severity: FindingSeverity.Low,
           type: FindingType.Unknown,
@@ -141,7 +159,7 @@ function provideHandleTransaction(erc20MockContract) {
           everestId: config.umaEverestId,
           metadata: {
             requester,
-            currency,
+            identifier: idString,
             price: price.toString(),
           },
         }));
@@ -149,43 +167,32 @@ function provideHandleTransaction(erc20MockContract) {
 
       if (log.name === 'ProposePrice') {
         const {
-          currency, requester, proposer, proposedPrice: proposedPriceRaw,
+          identifier, requester, proposer, proposedPrice: proposedPriceRaw,
         } = log.args;
-        let erc20Contract;
 
-        // set up ERC-20 contract to get decimals value
-        // in production, erc20Contract will always be undefined
-        // in testing, erc20Contract will be assigned to a mock contract
-        if (erc20MockContract === undefined) {
-          erc20Contract = new ethers.Contract(currency, erc20Abi, provider);
-        } else {
-          erc20Contract = erc20MockContract;
-        }
+        // decode the identifer to determine which price feed to use
+        const idString = bytes32ToString(identifier);
 
-        const decimals = await erc20Contract.decimals();
-
-        // convert the proposedPrice to a BigNumber type for difference calculations later
-        const proposedPrice = new BigNumber(ethers.utils.formatUnits(proposedPriceRaw, decimals));
-
-        // make a request to the price feed API
-        // CoinGecko will return decimal values
+        // lookup the price
         let price;
         try {
-          price = await getPrice(currency);
-        } catch (error) {
-          console.error(error);
+          price = await getPriceFunc(idString);
+        } catch (err) {
+          console.error(err);
           continue;
         }
+
+        const proposedPrice = new BigNumber(proposedPriceRaw.toString());
 
         // generate a finding if the price difference threshold (defined in agent-config.json) has
         // been exceeded
         const percentError = calculatePercentError(proposedPrice, price);
-        const { priceThresholdPct } = config.optimisticOracle;
+        const { disputePriceErrorPercent } = config.optimisticOracle;
 
-        if (percentError.isGreaterThan(priceThresholdPct)) {
+        if (percentError.isGreaterThan(disputePriceErrorPercent * 100)) {
           findings.push(Finding.fromObject({
             name: 'UMA Price Proposal',
-            description: `Price proposed to Optimistic Oracle is disputable. Currency=${currency}, ProposedPrice=${proposedPrice}, Price=${price}`,
+            description: `Price proposed to Optimistic Oracle is disputable. Identifier=${idString}, ProposedPrice=${proposedPrice}, Price=${price}`,
             alertId: 'AE-UMA-OO-PROPOSEPRICE',
             severity: FindingSeverity.Low,
             type: FindingType.Unknown,
@@ -194,10 +201,10 @@ function provideHandleTransaction(erc20MockContract) {
             metadata: {
               requester,
               proposer,
-              currency,
+              identifier: idString,
               proposedPrice: proposedPrice.toString(),
               price: price.toString(),
-              priceThresholdPct,
+              disputePriceErrorPercent,
             },
           }));
         }

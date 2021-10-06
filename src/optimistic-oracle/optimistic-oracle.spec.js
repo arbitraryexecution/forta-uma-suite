@@ -1,6 +1,4 @@
 const ethers = require('ethers');
-const axios = require('axios');
-const BigNumber = require('bignumber.js');
 const { getAbi, getAddress } = require('@uma/contracts-node');
 const {
   Finding, FindingSeverity, FindingType, createTransactionEvent,
@@ -16,56 +14,37 @@ const config = require('../../agent-config.json');
 // constant values
 const CHAIN_ID = 1; // mainnet
 const ZERO_ADDRESS = ethers.constants.AddressZero;
-const ZERO_HASH = ethers.constants.HashZero;
-const USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+
+// "BTC-BASIC-3M/USDC" identifier encoded as a Bytes32 value
+const BTC_IDENTIFIER_STRING = 'BTC-BASIS-3M/USDC';
+const BTC_IDENTIFIER_DATA = '0x4254432d42415349532d334d2f55534443000000000000000000000000000000';
+
+// "BAD" identifier encoded as a Bytes32 value
+const BAD_IDENTIFIER_DATA = '0x4241440000000000000000000000000000000000000000000000000000000000';
+
+const MOCK_PRICE = '99999999999999999999';
 
 const optimisticOracleAbi = getAbi('OptimisticOracle');
 
 // create interface
 const iface = new ethers.utils.Interface(optimisticOracleAbi);
 
-// mock the web requests to CoinGecko
-jest.mock('axios');
+// mock the getPrice() function from optimistic-oracle.js
+async function mockGetPrice(identifier) {
+  if (identifier === BTC_IDENTIFIER_STRING) {
+    return MOCK_PRICE;
+  }
 
-// token address must be lowercase
-const mockPrice = '1';
-const mockCoinGeckoResponseUSDC = {
-  status: 200,
-  statusText: 'OK',
-  data: {
-    '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
-      usd: mockPrice,
-    },
-  },
-};
+  throw Error(`Unknown identifier ${identifier}`);
+}
 
-const mockCoinGeckoResponseBadToken = {
-  status: 200,
-  statusText: 'OK',
-  data: {},
-};
-
-const mockCoinGeckoResponse404 = {
-  status: 404,
-  statusText: 'Not Found',
-};
-
-// mock the call to <ERC20Contract>.decimals()
-const mockDecimals = 6; // USDC = 6 decimals
-const mockErc20Contract = {
-  decimals: jest.fn(() => Promise.resolve(
-    mockDecimals,
-  )),
-};
+async function mockGetPriceBadResponse(identifier) {
+  throw Error(`Timeout or bad response to price feed request for identifier ${identifier}`);
+}
 
 describe('UMA optimistic oracle validation agent', () => {
-  let handleTransaction = null;
+  let handleTransaction;
   let optimisticOracleAddress = null;
-
-  // reset function call count after each test
-  afterEach(() => {
-    axios.get.mockClear();
-  });
 
   it('returns an empty finding if contract address does not match', async () => {
     // get the optimistic oracle address (this will be used in all tests)
@@ -83,18 +62,14 @@ describe('UMA optimistic oracle validation agent', () => {
       },
     });
 
-    handleTransaction = provideHandleTransaction(mockErc20Contract);
+    handleTransaction = provideHandleTransaction(mockGetPrice);
     const findings = await handleTransaction(txEvent);
 
-    expect(axios.get).toHaveBeenCalledTimes(0);
     expect(findings).toStrictEqual([]);
   });
 
-  it('returns no finding if a price was requested for an unknown currency', async () => {
+  it('returns no finding if a price was requested for an unknown identifier', async () => {
     const requester = ZERO_ADDRESS;
-    const currency = '0xBAD0000000000000000000000000000000000000';
-
-    axios.get.mockResolvedValue(mockCoinGeckoResponseBadToken);
 
     // build a log that encodes the data for a RequestPrice event
     // the agent will decode 'requester' and 'currency' from the data
@@ -102,10 +77,10 @@ describe('UMA optimistic oracle validation agent', () => {
       iface.getEvent('RequestPrice'),
       {
         requester,
-        identifier: ZERO_HASH,
+        identifier: BAD_IDENTIFIER_DATA,
         timestamp: 0,
         ancillaryData: '0x00',
-        currency,
+        currency: ZERO_ADDRESS,
         reward: 0,
         finalFee: 0,
       },
@@ -117,30 +92,25 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockErc20Contract);
+    handleTransaction = provideHandleTransaction(mockGetPrice);
     const findings = await handleTransaction(txEvent);
 
-    expect(axios.get).toHaveBeenCalledTimes(1);
     expect(findings).toStrictEqual([]);
   });
 
-  it('returns no finding if CoinGecko fails to respond to a price request', async () => {
+  it('returns no finding if the price feed fails to respond to a price request', async () => {
     const requester = ZERO_ADDRESS;
-    const currency = USDC_ADDRESS;
-
-    // mock a 404 response to GET request
-    axios.get.mockResolvedValue(mockCoinGeckoResponse404);
 
     // build a log that encodes the data for a RequestPrice event
-    // the agent will decode 'requester' and 'currency' from the data
+    // the agent will decode 'identifier' and 'requester' from the data
     const log = createLog(
       iface.getEvent('RequestPrice'),
       {
         requester,
-        identifier: ZERO_HASH,
+        identifier: BTC_IDENTIFIER_DATA,
         timestamp: 0,
         ancillaryData: '0x00',
-        currency,
+        currency: ZERO_ADDRESS,
         reward: 0,
         finalFee: 0,
       },
@@ -152,30 +122,27 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockErc20Contract);
+    handleTransaction = provideHandleTransaction(mockGetPriceBadResponse);
     const findings = await handleTransaction(txEvent);
 
-    expect(axios.get).toHaveBeenCalledTimes(1);
     expect(findings).toStrictEqual([]);
   });
 
   it('returns a finding if a price was requested from the oracle', async () => {
     const requester = ZERO_ADDRESS;
-    const currency = USDC_ADDRESS;
-    const price = mockPrice;
-
-    axios.get.mockResolvedValue(mockCoinGeckoResponseUSDC);
+    const idString = 'BTC-BASIS-3M/USDC';
+    const price = MOCK_PRICE;
 
     // build a log that encodes the data for a RequestPrice event
-    // the agent will decode 'requester' and 'currency' from the data
+    // the agent will decode 'identifier' and 'requester' from the data
     const log = createLog(
       iface.getEvent('RequestPrice'),
       {
         requester,
-        identifier: ZERO_HASH,
+        identifier: BTC_IDENTIFIER_DATA,
         timestamp: 0,
         ancillaryData: '0x00',
-        currency,
+        currency: ZERO_ADDRESS,
         reward: 0,
         finalFee: 0,
       },
@@ -187,14 +154,13 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockErc20Contract);
+    handleTransaction = provideHandleTransaction(mockGetPrice);
     const findings = await handleTransaction(txEvent);
 
-    expect(axios.get).toHaveBeenCalledTimes(1);
     expect(findings).toStrictEqual([
       Finding.fromObject({
         name: 'UMA Price Request',
-        description: `Price requested from Optimistic Oracle.  Currency=${currency}, Price=${price}`,
+        description: `Price requested from Optimistic Oracle.  Identifier=${idString}, Price=${price}`,
         alertId: 'AE-UMA-OO-REQUESTPRICE',
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
@@ -202,7 +168,7 @@ describe('UMA optimistic oracle validation agent', () => {
         everestId: config.umaEverestId,
         metadata: {
           requester,
-          currency,
+          identifier: idString,
           price: price.toString(),
         },
       }),
@@ -212,24 +178,21 @@ describe('UMA optimistic oracle validation agent', () => {
   it('returns an empty finding if proposed price difference is below threshold', async () => {
     const requester = ZERO_ADDRESS;
     const proposer = ZERO_ADDRESS;
-    const currency = USDC_ADDRESS;
-    const proposedPrice = '1'; // 1 USDC
-
-    axios.get.mockResolvedValue(mockCoinGeckoResponseUSDC);
+    const proposedPrice = '100000000000000000000';
 
     // build a log that encodes the data for a ProposePrice event
-    // the agent will decode 'requester', 'proposer', 'proposedPrice', and 'currency' from the data
+    // the agent will decode 'identifier', 'requester', 'proposer', 'proposedPrice'
     const log = createLog(
       iface.getEvent('ProposePrice'),
       {
         requester,
         proposer,
-        identifier: ZERO_HASH,
+        identifier: BTC_IDENTIFIER_DATA,
         timestamp: 0,
         ancillaryData: '0x00',
-        proposedPrice: parseInt(proposedPrice * (10 ** mockDecimals), 10),
+        proposedPrice,
         expirationTimestamp: 0,
-        currency,
+        currency: ZERO_ADDRESS,
       },
       { address: optimisticOracleAddress },
     );
@@ -239,36 +202,33 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockErc20Contract);
+    handleTransaction = provideHandleTransaction(mockGetPrice);
     const findings = await handleTransaction(txEvent);
 
-    expect(axios.get).toHaveBeenCalledTimes(1);
     expect(findings).toStrictEqual([]);
   });
 
   it('returns a finding if proposed price difference exceeds threshold', async () => {
     const requester = ZERO_ADDRESS;
     const proposer = ZERO_ADDRESS;
-    const currency = USDC_ADDRESS;
-    const proposedPrice = '1.5'; // 1.5 USDC
-    const price = mockPrice;
-    const { priceThresholdPct } = config.optimisticOracle;
-
-    axios.get.mockResolvedValue(mockCoinGeckoResponseUSDC);
+    const idString = 'BTC-BASIS-3M/USDC';
+    const proposedPrice = '110000000000000000000';
+    const price = MOCK_PRICE;
+    const { disputePriceErrorPercent } = config.optimisticOracle;
 
     // build a log that encodes the data for a ProposePrice event
-    // the agent will decode 'requester', 'proposer', 'proposedPrice', and 'currency' from the data
+    // the agent will decode 'identifier', 'requester', 'proposer', 'proposedPrice' from the data
     const log = createLog(
       iface.getEvent('ProposePrice'),
       {
         requester,
         proposer,
-        identifier: ZERO_HASH,
+        identifier: BTC_IDENTIFIER_DATA,
         timestamp: 0,
         ancillaryData: '0x00',
-        proposedPrice: parseInt(proposedPrice * (10 ** mockDecimals), 10),
+        proposedPrice,
         expirationTimestamp: 0,
-        currency,
+        currency: ZERO_ADDRESS,
       },
       { address: optimisticOracleAddress },
     );
@@ -278,14 +238,13 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockErc20Contract);
+    handleTransaction = provideHandleTransaction(mockGetPrice);
     const findings = await handleTransaction(txEvent);
 
-    expect(axios.get).toHaveBeenCalledTimes(1);
     expect(findings).toStrictEqual([
       Finding.fromObject({
         name: 'UMA Price Proposal',
-        description: `Price proposed to Optimistic Oracle is disputable. Currency=${currency}, ProposedPrice=${proposedPrice}, Price=${price}`,
+        description: `Price proposed to Optimistic Oracle is disputable. Identifier=${idString}, ProposedPrice=${proposedPrice}, Price=${price}`,
         alertId: 'AE-UMA-OO-PROPOSEPRICE',
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
@@ -294,10 +253,10 @@ describe('UMA optimistic oracle validation agent', () => {
         metadata: {
           requester,
           proposer,
-          currency,
+          identifier: idString,
           proposedPrice: proposedPrice.toString(),
           price: price.toString(),
-          priceThresholdPct,
+          disputePriceErrorPercent,
         },
       }),
     ]);

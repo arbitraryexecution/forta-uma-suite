@@ -72,8 +72,8 @@ the following handlers:
 
 The agent-config.json file contains user-configurable agent settings.
 
-- priceThesholdPct: Sets the percent difference between proposed price and actual price that will
-trigger the AE-UMA-OO-PROPOSEPRICE alert
+- disputePriceErrorPercent: Sets the percent difference between proposed price and actual price that
+  will trigger the AE-UMA-OO-PROPOSEPRICE alert (default value = 0.05, or 5%)
 
 ## Test Data
 
