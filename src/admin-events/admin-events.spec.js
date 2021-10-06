@@ -94,7 +94,7 @@ describe('admin event monitoring', () => {
 
       // Run agent
       const findings = await handleTransaction(txEvent);
-      const alert = [createAlert(eventName, contractName, contractAddress, 'Unknown', 'Low')];
+      const alert = [createAlert(eventName, contractName, contractAddress, 'Info', 'Low')];
       expect(findings).toStrictEqual(alert);
     });
   });
