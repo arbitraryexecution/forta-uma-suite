@@ -1,6 +1,7 @@
 const adminEvents = require('./admin-events/admin-events');
 const deployerWatch = require('./deployer-watch');
 const monitorMintCalls = require('./monitor-mint-calls');
+const optimisticOracle = require('./optimistic-oracle/optimistic-oracle');
 
 function provideHandleTransaction(agents) {
   return async function handleTransaction(txEvent) {
@@ -18,5 +19,6 @@ module.exports = {
     adminEvents,
     deployerWatch,
     monitorMintCalls,
+    optimisticOracle,
   ]),
 };
