@@ -76,35 +76,43 @@ function calculatePercentError(first, second) {
   return delta.div(first).multipliedBy(100);
 }
 
-// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
-function escapeRegExp(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-}
-
-function replaceAll(str, match, replacement) {
-  return str.replace(new RegExp(escapeRegExp(match), 'g'), () => replacement);
-}
-
-// decodes a bytes32 value to an ascii string
-function bytes32ToString(identifier) {
-  let idString = Buffer.from(identifier.slice(2), 'hex').toString();
-
-  // strip off trailing zeros after conversion
-  idString = replaceAll(idString, '\u0000', '');
-  return idString;
-}
-
 // creates a price feed using the UMA library
 async function createPriceFeed({ identifier, config }) {
-  return createReferencePriceFeedForFinancialContract(
+  // make a copy so we can change config w/o affecting the function argument (no-param-reassign)
+  const localConfig = config;
+
+  // try to create a price feed
+  // this typically fails if the target asset requires a specific API key,
+  // or the lookback value has not been set
+  let priceFeed = await createReferencePriceFeedForFinancialContract(
     logger,
     web3,
     new Networker(),
     getTime,
     undefined, // no address needed since we're passing identifier explicitly
-    config,
+    localConfig,
     identifier,
-  );
+  ).catch();
+
+  // if the first attempt failed, set a lookback value and try again
+  if (!priceFeed) {
+    localConfig.lookback = 0;
+    priceFeed = await createReferencePriceFeedForFinancialContract(
+      logger,
+      web3,
+      new Networker(),
+      getTime,
+      undefined, // no address needed since we're passing identifier explicitly
+      localConfig,
+      identifier,
+    ).catch();
+  }
+
+  if (!priceFeed) {
+    throw Error(`Unable to create price feed for identifier '${identifier}'`);
+  }
+
+  return priceFeed;
 }
 
 // get the price of an asset based on the UMA identifier string
@@ -112,25 +120,22 @@ async function createPriceFeed({ identifier, config }) {
 // example identifiers: "BTC-BASIS-3M/USDC", "STABLESPREAD/USDC_18DEC"
 // this identifier will be used as a lookup in DefaultPriceFeedConfigs.ts in the UMA lib
 async function getPrice(identifier) {
+  // if the user has not set a specific API key in the admin-events.json file, set it to undefined
+  // many assets prices can be obtained using cryptowatch w/o any API key at all (rate limited)
   const args = {
     identifier,
     config: {
-      cryptowatchApiKey: CRYPTOWATCH_API_KEY,
-      defipulseApiKey: DEFIPULSE_API_KEY,
-      tradermadeApiKey: TRADERMADE_API_KEY,
-      cmcApiKey: CMC_API_KEY,
+      cryptowatchApiKey: CRYPTOWATCH_API_KEY || undefined,
+      defipulseApiKey: DEFIPULSE_API_KEY || undefined,
+      tradermadeApiKey: TRADERMADE_API_KEY || undefined,
+      cmcApiKey: CMC_API_KEY || undefined,
     },
   };
 
-  let priceFeed = await createPriceFeed(args).catch();
-  if (!priceFeed) {
-    args.config.lookback = 0;
-    priceFeed = await createPriceFeed(args);
-  }
-  if (!priceFeed) {
-    throw Error(`Unable to create price feed for identifier '${identifier}'`);
-  }
+  // attempt to obtain a UMA price feed object
+  const priceFeed = createPriceFeed(args);
 
+  // make an external request to get the price value
   await priceFeed.update();
   const price = (await priceFeed.getCurrentPrice()).toString();
 
@@ -167,7 +172,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
         const { identifier, requester } = log.args;
 
         // decode the identifer to determine which price feed to use
-        const idString = bytes32ToString(identifier);
+        const idString = ethers.utils.parseBytes32String(identifier);
 
         // lookup the price
         let price;
@@ -184,7 +189,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
           description: `Price requested from Optimistic Oracle.  Identifier=${idString}, Price=${price}`,
           alertId: 'AE-UMA-OO-REQUESTPRICE',
           severity: FindingSeverity.Low,
-          type: FindingType.Unknown,
+          type: FindingType.Info,
           protocol: 'uma',
           everestId: UMA_EVEREST_ID,
           metadata: {
@@ -201,7 +206,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
         } = log.args;
 
         // decode the identifer to determine which price feed to use
-        const idString = bytes32ToString(identifier);
+        const idString = ethers.utils.parseBytes32String(identifier);
 
         // lookup the price
         let price;
@@ -214,29 +219,37 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
 
         const proposedPrice = new BigNumber(proposedPriceRaw.toString());
 
-        // generate a finding if the price difference threshold (defined in agent-config.json) has
-        // been exceeded
+        // generate a low-serverity finding if the price difference is below the threshold
+        // (defined in agent-config.json) and high-severity if it has been exceeded
+        let severity;
+        let descriptionPrefix;
         const percentError = calculatePercentError(proposedPrice, price);
 
         if (percentError.isGreaterThan(disputePriceErrorPercent * 100)) {
-          findings.push(Finding.fromObject({
-            name: 'UMA Price Proposal',
-            description: `Price proposed to Optimistic Oracle is disputable. Identifier=${idString}, ProposedPrice=${proposedPrice}, Price=${price}`,
-            alertId: 'AE-UMA-OO-PROPOSEPRICE',
-            severity: FindingSeverity.Low,
-            type: FindingType.Unknown,
-            protocol: 'uma',
-            everestId: UMA_EVEREST_ID,
-            metadata: {
-              requester,
-              proposer,
-              identifier: idString,
-              proposedPrice: proposedPrice.toString(),
-              price: price.toString(),
-              disputePriceErrorPercent,
-            },
-          }));
+          severity = FindingSeverity.High;
+          descriptionPrefix = 'Price proposed to Optimistic Oracle is disputable.';
+        } else {
+          severity = FindingSeverity.Low;
+          descriptionPrefix = 'Price proposed to Optimistic Oracle is acceptable.';
         }
+
+        findings.push(Finding.fromObject({
+          name: 'UMA Price Proposal',
+          description: `${descriptionPrefix} Identifier=${idString}, ProposedPrice=${proposedPrice}, Price=${price}`,
+          alertId: 'AE-UMA-OO-PROPOSEPRICE',
+          severity,
+          type: FindingType.Info,
+          protocol: 'uma',
+          everestId: UMA_EVEREST_ID,
+          metadata: {
+            requester,
+            proposer,
+            identifier: idString,
+            proposedPrice: proposedPrice.toString(),
+            price: price.toString(),
+            disputePriceErrorPercent,
+          },
+        }));
       }
     }
 

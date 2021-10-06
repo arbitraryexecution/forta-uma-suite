@@ -125,6 +125,7 @@ describe('UMA optimistic oracle validation agent', () => {
       'USDDEXTF',
       'DEXTFUSD',
       'uSTONKS_0921',
+      // ibBTC currently not supported - requires NODE_URL_137 env variable to be set
       // 'ibBTC/BTC',
       // 'BTC/ibBTC',
       // 'ibBTC/USD',
@@ -145,14 +146,8 @@ describe('UMA optimistic oracle validation agent', () => {
         },
       };
 
-      let priceFeed = await createPriceFeed(args).catch();
-      if (!priceFeed) {
-        args.config.lookback = 0;
-        priceFeed = await createPriceFeed(args);
-      }
-      if (!priceFeed) {
-        throw Error(`Unable to create price feed for identifier '${identifier}'`);
-      }
+      const priceFeed = await createPriceFeed(args);
+      expect(priceFeed).toBeDefined();
     }
     /* eslint-enable no-await-in-loop */
   });
@@ -274,7 +269,7 @@ describe('UMA optimistic oracle validation agent', () => {
         description: `Price requested from Optimistic Oracle.  Identifier=${idString}, Price=${price}`,
         alertId: 'AE-UMA-OO-REQUESTPRICE',
         severity: FindingSeverity.Low,
-        type: FindingType.Unknown,
+        type: FindingType.Info,
         protocol: 'uma',
         everestId: UMA_EVEREST_ID,
         metadata: {
@@ -286,10 +281,12 @@ describe('UMA optimistic oracle validation agent', () => {
     ]);
   });
 
-  it('returns an empty finding if proposed price difference is below threshold', async () => {
+  it('returns a low-severity finding if proposed price difference is below threshold', async () => {
     const requester = ZERO_ADDRESS;
     const proposer = ZERO_ADDRESS;
+    const idString = 'BTC-BASIS-3M/USDC';
     const proposedPrice = '100000000000000000000';
+    const price = MOCK_PRICE;
 
     // build a log that encodes the data for a ProposePrice event
     // the agent will decode 'identifier', 'requester', 'proposer', 'proposedPrice'
@@ -316,10 +313,28 @@ describe('UMA optimistic oracle validation agent', () => {
     handleTransaction = provideHandleTransaction(mockGetPrice);
     const findings = await handleTransaction(txEvent);
 
-    expect(findings).toStrictEqual([]);
+    expect(findings).toStrictEqual([
+      Finding.fromObject({
+        name: 'UMA Price Proposal',
+        description: `Price proposed to Optimistic Oracle is acceptable. Identifier=${idString}, ProposedPrice=${proposedPrice}, Price=${price}`,
+        alertId: 'AE-UMA-OO-PROPOSEPRICE',
+        severity: FindingSeverity.Low,
+        type: FindingType.Info,
+        protocol: 'uma',
+        everestId: UMA_EVEREST_ID,
+        metadata: {
+          requester,
+          proposer,
+          identifier: idString,
+          proposedPrice: proposedPrice.toString(),
+          price: price.toString(),
+          disputePriceErrorPercent,
+        },
+      }),
+    ]);
   });
 
-  it('returns a finding if proposed price difference exceeds threshold', async () => {
+  it('returns a high-severity finding if proposed price difference exceeds threshold', async () => {
     const requester = ZERO_ADDRESS;
     const proposer = ZERO_ADDRESS;
     const idString = 'BTC-BASIS-3M/USDC';
@@ -356,8 +371,8 @@ describe('UMA optimistic oracle validation agent', () => {
         name: 'UMA Price Proposal',
         description: `Price proposed to Optimistic Oracle is disputable. Identifier=${idString}, ProposedPrice=${proposedPrice}, Price=${price}`,
         alertId: 'AE-UMA-OO-PROPOSEPRICE',
-        severity: FindingSeverity.Low,
-        type: FindingType.Unknown,
+        severity: FindingSeverity.High,
+        type: FindingType.Info,
         protocol: 'uma',
         everestId: UMA_EVEREST_ID,
         metadata: {

@@ -49,24 +49,17 @@ the following handlers:
 - AE-UMA-OO-REQUESTPRICE
   - Fired when the RequestPrice event is emitted by the Optimistic Oracle contract
   - Severity is always set to "low"
-  - Type is always set to "unknown"
-  - Metadata field contains requester, identifier, and price
-    - Requester is an EOA decoded from the event
-    - Identifier is the string representation of the asset
-    - Price is obtained for the token address from an external price feed (CoinGecko)
+  - Type is always set to "info"
+  - Metadata field contains requester, identifier, and price (obtained from external price feed)
 
 <!-- -->
 - AE-UMA-OO-PROPOSEPRICE
   - Fired when the ProposePrice event is emitted by the Optimistic Oracle contract
-  - Severity is always set to "low"
-  - Type is always set to "unknown"
+  - Severity is set to "low" for a price that is within the threshold of the price feed data,
+    and set to "high" for a price that exceeds the threshold
+  - Type is always set to "info"
   - Metadata field contains requester, proposer, identifier, proposed price, price, and the threshold
     percentage that triggered the event
-    - Requester and proposer are EOAs decoded from the event
-    - Identifier is the string representation of the asset
-    - Proposed price is decoded from the event, then adjusted to be denominated in USD
-    - Price is obtained for the token address from an external price feed (CoinGecko)
-    - Threshold is obtained from agent-config.json
 
 ## Agent Configuration
 
