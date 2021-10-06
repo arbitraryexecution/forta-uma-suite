@@ -18,9 +18,11 @@ const blockHandlers = [
 // returns findings over all transactionHandler's handleTransaction functions
 function provideHandleTransaction(agents) {
   return async function handleTransaction(txEvent) {
-    const findings = (await Promise.all(
-      agents.map((agent) => agent.handleTransaction(txEvent)),
-    )).flat();
+    const findings = (
+      await Promise.all(
+        agents.map((agent) => agent.handleTransaction(txEvent)),
+      )
+    ).flat();
 
     return findings;
   };
