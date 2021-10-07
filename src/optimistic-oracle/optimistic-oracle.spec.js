@@ -1,5 +1,5 @@
 const ethers = require('ethers');
-const { getAbi, getAddress } = require('@uma/contracts-node');
+const { getAbi } = require('@uma/contracts-node');
 const {
   Finding, FindingSeverity, FindingType, createTransactionEvent,
 } = require('forta-agent');
@@ -7,6 +7,7 @@ const {
   initialize,
   provideHandleTransaction,
   createPriceFeed,
+  getOracleAddress,
 } = require('./optimistic-oracle');
 
 // load functions from event manipulation library
@@ -27,7 +28,6 @@ const {
 } = optimisticOracleConfig;
 
 // constant values
-const CHAIN_ID = 1; // mainnet
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 
 // "BTC-BASIC-3M/USDC" identifier encoded as a Bytes32 value
@@ -139,33 +139,31 @@ describe('UMA optimistic oracle validation agent', () => {
       'GASETH-0921',
     ];
 
-    /* eslint-disable no-await-in-loop */
-    for (let i = 0; i < idList.length; i++) {
-      const identifier = idList[i];
-      const args = {
-        identifier,
-        config: {
-          cryptowatchApiKey: CRYPTOWATCH_API_KEY,
-          defipulseApiKey: DEFIPULSE_API_KEY,
-          tradermadeApiKey: TRADERMADE_API_KEY,
-          cmcApiKey: CMC_API_KEY,
-        },
-      };
+    // set up common price feed config
+    const args = {
+      config: {
+        cryptowatchApiKey: CRYPTOWATCH_API_KEY,
+        defipulseApiKey: DEFIPULSE_API_KEY,
+        tradermadeApiKey: TRADERMADE_API_KEY,
+        cmcApiKey: CMC_API_KEY,
+      },
+    };
 
-      const priceFeed = await createPriceFeed(args);
-      expect(priceFeed).toBeDefined();
-    }
-    /* eslint-enable no-await-in-loop */
+    // iterate idList and attempt to create a price feed for each entry
+    const promises = idList.map((identifier) => {
+      args.identifier = identifier;
+      return createPriceFeed(args);
+    });
+
+    // if any price feed cannot be created, this will throw an exception
+    await Promise.all(promises);
   });
 
   it('returns an empty finding if contract address does not match', async () => {
-    // do agent initialization
+    // invoke the handler's initialize function, then get the optimistic oracle address
+    // (this will be used in all subsequent tests)
     await initialize();
-
-    // get the optimistic oracle address (this will be used in all tests)
-    // this needs to be done within an async function
-    const optimisticOracleAddressPromise = getAddress('OptimisticOracle', CHAIN_ID);
-    optimisticOracleAddress = await optimisticOracleAddressPromise;
+    optimisticOracleAddress = getOracleAddress();
     expect(optimisticOracleAddress).toBeDefined();
 
     const txEvent = createTransactionEvent({
