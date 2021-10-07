@@ -50,9 +50,20 @@ function filterAndParseLogs(logs, address, iface, eventNames) {
   return parsedLogs;
 }
 
+// Helper function that converts the args so they can be in the metadata
+// Removed fields that are not named.  They have numeric names in Object.keys()
+// Converts all values to strings so that BigNumbers are readable
+function extractArgs(args) {
+  const strippedArgs = Object();
+  Object.keys(args).forEach((k) => {
+    if (Number.isNaN(k)) { strippedArgs[k] = args[k].toString(); }
+  });
+  return strippedArgs;
+}
+
 // helper function to create alerts
 function createAlert(eventName, contractName, contractAddress, eventType, eventSeverity, args) {
-  args = args.toString();
+  const strippedArgs = extractArgs(args);
   return Finding.fromObject({
     name: 'UMA Admin Event',
     description: `The ${eventName} event was emitted by the ${contractName} contract`,
@@ -65,7 +76,7 @@ function createAlert(eventName, contractName, contractAddress, eventType, eventS
       contractName,
       contractAddress,
       eventName,
-      args,
+      strippedArgs,
     },
   });
 }
@@ -91,13 +102,13 @@ async function handleTransaction(txEvent) {
     const parsedLogs = filterAndParseLogs(txEvent.logs, contractAddress, iface, eventNames);
 
     // Alert on each item in parsedLogs
-    parsedLogs.forEach((log) => {
-      findings.push(createAlert(log.name,
+    parsedLogs.forEach((parsedLog) => {
+      findings.push(createAlert(parsedLog.name,
         contractName,
         contractAddress,
-        events[log.name].type,
-        events[log.name].severity,
-        log.args));
+        events[parsedLog.name].type,
+        events[parsedLog.name].severity,
+        parsedLog.args));
     });
   });
 

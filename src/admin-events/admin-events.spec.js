@@ -94,7 +94,13 @@ describe('admin event monitoring', () => {
 
       // Run agent
       const findings = await handleTransaction(txEvent);
-      const args = '0x0000000000000000000000000000000000000000,0,0x0000000000000000000000000000000000000000000000000000000000000000,0,0x';
+      const args = {
+        voter: '0x0000000000000000000000000000000000000000',
+        roundId: '0',
+        identifier: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        time: '0',
+        ancillaryData: '0x',
+      };
       const alert = [createAlert(eventName, contractName, contractAddress, 'Info', 'Low', args)];
       expect(findings).toStrictEqual(alert);
     });
