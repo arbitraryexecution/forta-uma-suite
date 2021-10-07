@@ -38,7 +38,7 @@ the following handlers:
 - AE-UMA-LIQUIDATABLE-POSITION
   - Fired when a monitored contract has a liquidatable position due to price changes or invalid withdrawals
   - Severity is always set to "medium"
-  - type is always set to "degraded"
+  - Type is always set to "info"
   - Metadata field contains position details and the returned price from the price feed
 
 - AE-UMA-UNAUTHORIZED-MINT
