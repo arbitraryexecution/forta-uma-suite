@@ -17,7 +17,7 @@ describe('agents', () => {
     handleTransaction: jest.fn(),
   };
   const mockTxEvent = {
-    some: 'event',
+    some: 'txEvent',
   };
 
   const blockHandler1 = {
@@ -32,7 +32,7 @@ describe('agents', () => {
     handleBlock: jest.fn(),
   };
   const mockBlockEvent = {
-    some: 'event',
+    some: 'blockEvent',
   };
 
   beforeAll(() => {
@@ -90,7 +90,7 @@ describe('agents', () => {
       blockHandler2.handleBlock.mockReturnValueOnce([mockFinding]);
       blockHandler3.handleBlock.mockReturnValueOnce([]);
 
-      const findings = await handleBlock(mockTxEvent);
+      const findings = await handleBlock(mockBlockEvent);
 
       expect(findings).toStrictEqual([mockFinding, mockFinding, mockFinding]);
       expect(blockHandler1.handleBlock).toHaveBeenCalledTimes(1);
