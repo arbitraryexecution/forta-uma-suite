@@ -52,7 +52,7 @@ let timer;
 let fundingRateIdentifier;
 let multicall;
 
-// Js Objects, clients and helpers
+// js Objects, clients and helpers
 let identifier;
 let spy;
 let spyLogger;
