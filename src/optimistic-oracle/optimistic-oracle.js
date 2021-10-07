@@ -17,7 +17,7 @@ const {
 
 // load agent configuration
 const {
-  umaEverestId: UMA_EVEREST_ID,
+  umaEverestId,
   optimisticOracle: optimisticOracleConfig,
 } = require('../../agent-config.json');
 
@@ -78,9 +78,6 @@ function calculatePercentError(first, second) {
 
 // creates a price feed using the UMA library
 async function createPriceFeed({ identifier, config }) {
-  // make a deep copy so we can change config (no-param-reassign)
-  const localConfig = JSON.parse(JSON.stringify(config));
-
   // try to create a price feed
   // this typically fails if the target asset requires a specific API key,
   // or the lookback value has not been set
@@ -90,20 +87,19 @@ async function createPriceFeed({ identifier, config }) {
     new Networker(),
     getTime,
     undefined, // no address needed since we're passing identifier explicitly
-    localConfig,
+    config,
     identifier,
   ).catch();
 
   // if the first attempt failed, set a lookback value and try again
   if (!priceFeed) {
-    localConfig.lookback = 0;
     priceFeed = await createReferencePriceFeedForFinancialContract(
       logger,
       web3,
       new Networker(),
       getTime,
       undefined, // no address needed since we're passing identifier explicitly
-      localConfig,
+      { lookback: 0, ...config },
       identifier,
     ).catch();
   }
@@ -191,7 +187,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
           severity: FindingSeverity.Low,
           type: FindingType.Info,
           protocol: 'uma',
-          everestId: UMA_EVEREST_ID,
+          everestId: umaEverestId,
           metadata: {
             requester,
             identifier: idString,
@@ -240,7 +236,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
           severity,
           type: FindingType.Info,
           protocol: 'uma',
-          everestId: UMA_EVEREST_ID,
+          everestId: umaEverestId,
           metadata: {
             requester,
             proposer,

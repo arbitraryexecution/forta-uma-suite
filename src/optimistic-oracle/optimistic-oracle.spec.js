@@ -10,7 +10,7 @@ const { createLog, createReceipt } = require('../event-utils');
 
 // load agent configuration
 const {
-  umaEverestId: UMA_EVEREST_ID,
+  umaEverestId,
   optimisticOracle: optimisticOracleConfig,
 } = require('../../agent-config.json');
 
@@ -271,7 +271,7 @@ describe('UMA optimistic oracle validation agent', () => {
         severity: FindingSeverity.Low,
         type: FindingType.Info,
         protocol: 'uma',
-        everestId: UMA_EVEREST_ID,
+        everestId: umaEverestId,
         metadata: {
           requester,
           identifier: idString,
@@ -321,7 +321,7 @@ describe('UMA optimistic oracle validation agent', () => {
         severity: FindingSeverity.Low,
         type: FindingType.Info,
         protocol: 'uma',
-        everestId: UMA_EVEREST_ID,
+        everestId: umaEverestId,
         metadata: {
           requester,
           proposer,
@@ -374,7 +374,7 @@ describe('UMA optimistic oracle validation agent', () => {
         severity: FindingSeverity.High,
         type: FindingType.Info,
         protocol: 'uma',
-        everestId: UMA_EVEREST_ID,
+        everestId: umaEverestId,
         metadata: {
           requester,
           proposer,
