@@ -46,11 +46,11 @@ async function mockGetPrice(identifier) {
     return MOCK_PRICE;
   }
 
-  throw Error(`Unknown identifier ${identifier}`);
+  throw new Error(`Unknown identifier ${identifier}`);
 }
 
 async function mockGetPriceBadResponse(identifier) {
-  throw Error(`Timeout or bad response to price feed request for identifier ${identifier}`);
+  throw new Error(`Timeout or bad response to price feed request for identifier ${identifier}`);
 }
 
 describe('UMA optimistic oracle validation agent', () => {

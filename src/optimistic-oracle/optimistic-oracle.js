@@ -78,8 +78,8 @@ function calculatePercentError(first, second) {
 
 // creates a price feed using the UMA library
 async function createPriceFeed({ identifier, config }) {
-  // make a copy so we can change config w/o affecting the function argument (no-param-reassign)
-  const localConfig = config;
+  // make a deep copy so we can change config (no-param-reassign)
+  const localConfig = JSON.parse(JSON.stringify(config));
 
   // try to create a price feed
   // this typically fails if the target asset requires a specific API key,
@@ -109,7 +109,7 @@ async function createPriceFeed({ identifier, config }) {
   }
 
   if (!priceFeed) {
-    throw Error(`Unable to create price feed for identifier '${identifier}'`);
+    throw new Error(`Unable to create price feed for identifier '${identifier}'`);
   }
 
   return priceFeed;

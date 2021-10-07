@@ -55,8 +55,9 @@ the following handlers:
 <!-- -->
 - AE-UMA-OO-PROPOSEPRICE
   - Fired when the ProposePrice event is emitted by the Optimistic Oracle contract
-  - Severity is set to "low" for a price that is within the threshold of the price feed data,
-    and set to "high" for a price that exceeds the threshold
+  - Severity is set to:
+    - "low" for a price that is within the threshold of the price feed data
+    - "high" for a price that exceeds the threshold
   - Type is always set to "info"
   - Metadata field contains requester, proposer, identifier, proposed price, price, and the threshold
     percentage that triggered the event
