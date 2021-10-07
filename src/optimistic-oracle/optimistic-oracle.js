@@ -129,7 +129,7 @@ async function getPrice(identifier) {
   };
 
   // attempt to obtain a UMA price feed object
-  const priceFeed = createPriceFeed(args);
+  const priceFeed = await createPriceFeed(args);
 
   // make an external request to get the price value
   await priceFeed.update();
@@ -138,15 +138,15 @@ async function getPrice(identifier) {
   return price;
 }
 
+async function initialize() {
+  // get the Optimistic Oracle contract address for mainnet
+  // the address returned by the promise will be lowercase
+  optimisticOracleAddress = await getAddress('OptimisticOracle', CHAIN_ID);
+}
+
 function provideHandleTransaction(getPriceFunc = getPrice) {
   return async function handleTransaction(txEvent) {
     const findings = [];
-
-    if (optimisticOracleAddress === undefined) {
-      // get the Optimistic Oracle contract address for mainnet
-      // the address returned by the promise will be lowercase
-      optimisticOracleAddress = await getAddress('OptimisticOracle', CHAIN_ID);
-    }
 
     // filter only logs that match the optimistic oracle address
     // test transaction for ProposePrice event:
@@ -254,6 +254,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
 }
 
 module.exports = {
+  initialize,
   provideHandleTransaction,
   handleTransaction: provideHandleTransaction(),
   createPriceFeed,

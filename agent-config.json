@@ -1,7 +1,7 @@
 {
   "optimisticOracle": {
     "disputePriceErrorPercent" : 0.05,
-    "cryptoWatchApiKey": "",
+    "cryptowatchApiKey": "",
     "defipulseApiKey": "",
     "tradermadeApiKey": "",
     "cmcApiKey": ""

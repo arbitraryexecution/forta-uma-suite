@@ -35,6 +35,9 @@ const BAD_IDENTIFIER_DATA = '0x4241440000000000000000000000000000000000000000000
 
 const MOCK_PRICE = '99999999999999999999';
 
+// stores the optimistic oracle contract address
+let optimisticOracleAddress;
+
 const optimisticOracleAbi = getAbi('OptimisticOracle');
 
 // create interface
@@ -55,7 +58,9 @@ async function mockGetPriceBadResponse(identifier) {
 
 describe('UMA optimistic oracle validation agent', () => {
   let handleTransaction;
-  let optimisticOracleAddress = null;
+  
+  // do agent-specific initialization
+  initialize();
 
   it('should create price feeds for supported assets w/o throwing any exceptions', async () => {
     // supported list of assets
@@ -153,11 +158,6 @@ describe('UMA optimistic oracle validation agent', () => {
   });
 
   it('returns an empty finding if contract address does not match', async () => {
-    // get the optimistic oracle address (this will be used in all tests)
-    // this needs to be done within an async function
-    const optimisticOracleAddressPromise = getAddress('OptimisticOracle', CHAIN_ID);
-    optimisticOracleAddress = await optimisticOracleAddressPromise;
-
     const txEvent = createTransactionEvent({
       receipt: {
         logs: [
