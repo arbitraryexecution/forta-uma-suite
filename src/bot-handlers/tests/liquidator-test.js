@@ -1,4 +1,6 @@
 /* eslint-disable no-loop-func, max-len */
+// most of this code is taken from UMA's repository
+// protocol/packages/liquidator/test/Liquidator.js
 const { web3, getContract } = require('hardhat');
 
 const {
@@ -106,7 +108,7 @@ describe('liquidator-test.js', () => {
       return getContract(name, { abi, bytecode });
     };
 
-    // Import the tested versions of contracts. note that financialContract is either an ExpiringMultiParty or a
+    // Import the tested versions of contracts. Note that financialContract is either an ExpiringMultiParty or a
     // Perpetual depending on the current iteration version.
     const FinancialContract = createContract(contractVersion.contractType);
     const Finder = createContract('Finder');

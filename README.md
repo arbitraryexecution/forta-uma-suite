@@ -36,7 +36,7 @@ the following handlers:
   - Metadata field contains contract name, contract address and event name
 
 - AE-UMA-LIQUIDATABLE-POSITION
-  - Fired when a monitored contract has a liquidatable position due to price changes or invalid withdrawls
+  - Fired when a monitored contract has a liquidatable position due to price changes or invalid withdrawals
   - Severity is always set to "medium"
   - type is always set to "degraded"
   - Metadata field contains position details and the returned price from the price feed

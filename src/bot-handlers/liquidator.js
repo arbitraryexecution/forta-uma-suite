@@ -16,13 +16,15 @@ const {
 // formats provided data into a Forta alert
 function createAlert(financialContractClient, position, price) {
   return Finding.fromObject({
-    name: `Liquidatable UMA position on contract ${financialContractClient.address}`,
-    description: 'Position is under collateralized and can be liquidated',
+    name: `Liquidator alert`,
+    description: `Position is under-collateralized and can be liquidated on contract \
+    ${financialContractClient._address}`,
     alertId: 'AE-UMA-LIQUIDATABLE-POSITION',
     severity: FindingSeverity.Medium,
-    type: FindingType.Degraded,
+    type: FindingType.Info,
     everestId: umaEverestId,
     metadata: {
+      financialContract: financialContractClient._address,
       ...position,
       tokenPrice: price.toString(),
     },
@@ -39,7 +41,7 @@ async function checkIfLiquidatable({ financialContractClient, priceFeed }) {
 
   // check if contract is expired
   if (await checkIsExpiredOrShutdown(financialContractClient)) {
-    console.error(`contract ${financialContractClient.address} is expired/shut down`);
+    console.error(`contract ${financialContractClient._address} is expired/shut down`);
     return [];
   }
 

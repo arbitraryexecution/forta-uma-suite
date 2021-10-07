@@ -1,4 +1,7 @@
-// Helpers
+// most of this code is taken from UMA's repository
+// protocol/packages/liquidator/index.js
+
+// helpers
 const { SUPPORTED_CONTRACT_VERSIONS, PublicNetworks } = require('@uma/common');
 
 // UMA JS libs
@@ -10,7 +13,7 @@ const {
   multicallAddressMap,
 } = require('@uma/financial-templates-lib');
 
-// Contract ABIs and network Addresses.
+// contract ABIs and network addresses
 const { findContractVersion } = require('@uma/core');
 const { getAbi } = require('@uma/contracts-node');
 
@@ -24,7 +27,7 @@ const Web3 = require('web3');
 const getTime = () => Math.round(new Date().getTime() / 1000);
 const web3 = new Web3(new Web3.providers.HttpProvider(getJsonRpcUrl()));
 
-// Returns whether the Financial Contract has expired yet
+// returns whether the Financial Contract has expired yet
 async function checkIsExpiredOrShutdown(financialContractClient) {
   const { financialContract, contractType } = financialContractClient;
   const [expirationOrShutdownTimestamp, contractTimestamp] = await Promise.all([
@@ -33,7 +36,7 @@ async function checkIsExpiredOrShutdown(financialContractClient) {
       : financialContract.methods.emergencyShutdownTimestamp().call(),
     financialContract.methods.getCurrentTime().call(),
   ]);
-  // Check if Financial Contract is expired.
+  // check if Financial Contract is expired.
   if (
     Number(contractTimestamp) >= Number(expirationOrShutdownTimestamp)
     && Number(expirationOrShutdownTimestamp) > 0
@@ -43,14 +46,14 @@ async function checkIsExpiredOrShutdown(financialContractClient) {
   return false;
 }
 
-// takes in a list of financial contract address and price feed config and returns a
+// takes in a list of financial contract addresses and price feed configs and returns a
 // list of { financialContractClient, priceFeed }
 async function processContractAndPriceFeed({ financialContractAddress, priceFeedConfig }) {
   // find contract version
   const detectedContract = await findContractVersion(financialContractAddress, web3);
 
-  // Check that the version and type is supported.
-  // Note if either is null this check will also catch it.
+  // check that the version and type are supported.
+  // note if either is null this check will also catch it.
   if (
     SUPPORTED_CONTRACT_VERSIONS.filter(
       (vo) => vo.contractType === detectedContract.contractType
@@ -58,17 +61,17 @@ async function processContractAndPriceFeed({ financialContractAddress, priceFeed
     ).length === 0
   ) {
     throw new Error(
-      `Contract at ${financialContractAddress} has version specified or inferred is not supported by this bot.`,
+      `Contract at ${financialContractAddress} has version specified or inferred that is not supported by this bot.`,
     );
   }
 
-  // Setup contract instances. This uses the contract version pulled in from previous step.
+  // setup contract instances. This uses the contract version pulled in from previous step.
   const financialContract = new web3.eth.Contract(
     getAbi(detectedContract.contractType, detectedContract.contractVersion),
     financialContractAddress,
   );
 
-  // Generate Financial Contract properties to inform bot of important on-chain
+  // generate financial contract properties to inform bot of important on-chain
   // state values that we only want to query once.
   const [
     collateralTokenAddress,
@@ -78,10 +81,10 @@ async function processContractAndPriceFeed({ financialContractAddress, priceFeed
     financialContract.methods.tokenCurrency().call(),
   ]);
 
-  // Create instances of our tokens
+  // create instances of our tokens
   const collateralToken = new web3.eth.Contract(getAbi('ExpandedERC20'), collateralTokenAddress);
   const syntheticToken = new web3.eth.Contract(getAbi('ExpandedERC20'), syntheticTokenAddress);
-  // Get decimal data for tokens
+  // get decimal data for tokens
   const [collateralDecimals, syntheticDecimals] = await Promise.all([
     collateralToken.methods.decimals().call(),
     syntheticToken.methods.decimals().call(),
@@ -101,12 +104,12 @@ async function processContractAndPriceFeed({ financialContractAddress, priceFeed
     throw new Error('Price feed config is invalid');
   }
 
-  // Get network name
+  // get network name
   const networkId = await web3.eth.net.getId();
   const networkName = PublicNetworks[Number(networkId)]
     ? PublicNetworks[Number(networkId)].name : null;
 
-  // Create the financialContractClient to query on-chain information
+  // create the financialContractClient to query on-chain information
   const financialContractClient = new FinancialContractClient(
     logger,
     getAbi(detectedContract.contractType, detectedContract.contractVersion),

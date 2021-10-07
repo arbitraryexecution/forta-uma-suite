@@ -11,7 +11,7 @@
     "range": "forta-agent run --range",
     "file": "forta-agent run --file",
     "publish": "forta-agent publish",
-    "test": "mocha ./src/bot-handlers/tests/liquidator-test.js && jest"
+    "test": "mocha ./src/bot-handlers/tests/*-test.js && jest"
   },
   "dependencies": {
     "@uma/common": "^2.7.0",
