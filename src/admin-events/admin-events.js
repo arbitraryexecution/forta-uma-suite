@@ -51,7 +51,8 @@ function filterAndParseLogs(logs, address, iface, eventNames) {
 }
 
 // helper function to create alerts
-function createAlert(eventName, contractName, contractAddress, eventType, eventSeverity) {
+function createAlert(eventName, contractName, contractAddress, eventType, eventSeverity, args) {
+  args = args.toString();
   return Finding.fromObject({
     name: 'UMA Admin Event',
     description: `The ${eventName} event was emitted by the ${contractName} contract`,
@@ -64,8 +65,15 @@ function createAlert(eventName, contractName, contractAddress, eventType, eventS
       contractName,
       contractAddress,
       eventName,
+      args,
     },
   });
+}
+
+function initialize() {
+  console.log('------------------');
+  console.log('Initialize');
+  console.log('------------------');
 }
 
 async function handleTransaction(txEvent) {
@@ -88,7 +96,8 @@ async function handleTransaction(txEvent) {
         contractName,
         contractAddress,
         events[log.name].type,
-        events[log.name].severity));
+        events[log.name].severity,
+        log.args));
     });
   });
 
@@ -98,4 +107,5 @@ async function handleTransaction(txEvent) {
 module.exports = {
   createAlert,
   handleTransaction,
+  initialize,
 };
