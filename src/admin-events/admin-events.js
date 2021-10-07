@@ -6,6 +6,9 @@ const ethers = require('ethers');
 const { umaEverestId } = require('../../agent-config.json');
 const adminEvents = require('./admin-events.json');
 
+// Stores information about each contract
+const contracts = [];
+
 // returns the list of events for a given contract
 function getEvents(contractName) {
   const events = adminEvents[contractName];
@@ -14,25 +17,6 @@ function getEvents(contractName) {
   }
   return events;
 }
-
-// get contract names for mapping to events
-const contractNames = Object.keys(adminEvents);
-
-// Constant for getAddress
-const CHAIN_ID = 1;
-
-// Create the interfaces for each contract that has events we wish to monitor
-const ifaces = {};
-contractNames.forEach((contractName) => {
-  // Get the abi for the contract
-  const abi = getAbi(contractName);
-
-  // create ethers interface object
-  const iface = new ethers.utils.Interface(abi);
-
-  // Create an association between the contract name and the interface
-  ifaces[contractName] = iface;
-});
 
 // Filters the logs to only events in eventNames
 function filterAndParseLogs(logs, address, iface, eventNames) {
@@ -81,31 +65,55 @@ function createAlert(eventName, contractName, contractAddress, eventType, eventS
   });
 }
 
-function initialize() {
-  console.log('------------------');
-  console.log('Initialize');
-  console.log('------------------');
+// Populates the contracts array
+async function initialize() {
+  // Constant for getAddress
+  const CHAIN_ID = 1;
+
+  // get contract names for mapping to events
+  const contractNames = Object.keys(adminEvents);
+
+  // Get the information about each contract we wish to monitor
+  for (let i = 0; i < contractNames.length; i++)
+  {
+    const name = contractNames[i];
+
+    // Get the abi for the contract
+    const abi = getAbi(name);
+
+    // create ethers interface object
+    const iface = new ethers.utils.Interface(abi);
+
+    // Get the contract Address for each contract
+    const address = (await getAddress(name, CHAIN_ID)).toLowerCase();
+
+    const contract = {
+      "name" : name,
+      "address" : address,
+      "iface" : iface,
+    }
+
+    contracts.push(contract);
+  }
 }
 
-async function handleTransaction(txEvent) {
+function handleTransaction(txEvent) {
   const findings = [];
 
   // iterate over each contract name to get the address and events
-  contractNames.forEach(async (contractName) => {
-    // for each contract name, lookup the address, events and interface
-    const contractAddress = (await getAddress(contractName, CHAIN_ID)).toLowerCase();
-    const events = getEvents(contractName);
+  contracts.forEach((contract) => {
+    // for each contract lookup the event events
+    const events = getEvents(contract.name);
     const eventNames = Object.keys(events);
-    const iface = ifaces[contractName];
 
     // Filter down to only the events we want to alert on
-    const parsedLogs = filterAndParseLogs(txEvent.logs, contractAddress, iface, eventNames);
+    const parsedLogs = filterAndParseLogs(txEvent.logs, contract.address, contract.iface, eventNames);
 
     // Alert on each item in parsedLogs
     parsedLogs.forEach((parsedLog) => {
       findings.push(createAlert(parsedLog.name,
-        contractName,
-        contractAddress,
+        contract.name,
+        contract.address,
         events[parsedLog.name].type,
         events[parsedLog.name].severity,
         parsedLog.args));

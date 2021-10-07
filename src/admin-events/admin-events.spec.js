@@ -2,13 +2,16 @@ const ethers = require('ethers');
 const { getAddress } = require('@uma/contracts-node');
 const { createTransactionEvent } = require('forta-agent');
 
-const { createAlert, handleTransaction } = require('./admin-events');
+const { createAlert, handleTransaction, initialize } = require('./admin-events');
 
 const CHAIN_ID = 1;
 const votingAddressPromise = getAddress('Voting', CHAIN_ID);
 
 // Tests
 describe('admin event monitoring', () => {
+  // Initialize the Handler
+  initialize();
+
   describe('handleTransaction', () => {
     it('returns empty findings if contract address does not match', async () => {
       // logs data for test case:  no address match + no topic match
