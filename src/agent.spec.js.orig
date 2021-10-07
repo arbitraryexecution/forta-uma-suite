@@ -16,6 +16,9 @@ describe('agents', () => {
   const txHandler3 = {
     handleTransaction: jest.fn(),
   };
+  const mockOptimisticOracleAgent = {
+    handleTransaction: jest.fn(),
+  };
   const mockTxEvent = {
     some: 'txEvent',
   };
@@ -37,6 +40,12 @@ describe('agents', () => {
 
   beforeAll(() => {
     handleTransaction = provideHandleTransaction([
+<<<<<<< HEAD
+      mockAdminEventsAgent,
+      mockDeployerWatchAgent,
+      mockMonitorMintCallsAgent,
+      mockOptimisticOracleAgent,
+=======
       txHandler1,
       txHandler2,
       txHandler3,
@@ -53,12 +62,25 @@ describe('agents', () => {
       blockHandler1,
       blockHandler2,
       blockHandler3,
+>>>>>>> main
     ]);
   });
 
   describe('handleTransaction', () => {
     it('invokes transaction handlers 1 through 3 and returns their findings', async () => {
       const mockFinding = { some: 'finding' };
+<<<<<<< HEAD
+      mockAdminEventsAgent.handleTransaction.mockReturnValueOnce([mockFinding]);
+      mockDeployerWatchAgent.handleTransaction.mockReturnValueOnce([mockFinding]);
+      mockMonitorMintCallsAgent.handleTransaction.mockReturnValueOnce([mockFinding]);
+      mockOptimisticOracleAgent.handleTransaction.mockReturnValueOnce([mockFinding]);
+
+      const findings = await handleTransaction(mockTxEvent);
+
+      expect(findings).toStrictEqual([mockFinding, mockFinding, mockFinding, mockFinding]);
+      expect(mockAdminEventsAgent.handleTransaction).toHaveBeenCalledTimes(1);
+      expect(mockAdminEventsAgent.handleTransaction).toHaveBeenCalledWith(
+=======
       txHandler1.handleTransaction.mockReturnValueOnce([mockFinding, mockFinding]);
       txHandler2.handleTransaction.mockReturnValueOnce([mockFinding]);
       txHandler3.handleTransaction.mockReturnValueOnce([]);
@@ -68,6 +90,7 @@ describe('agents', () => {
       expect(findings).toStrictEqual([mockFinding, mockFinding, mockFinding]);
       expect(txHandler1.handleTransaction).toHaveBeenCalledTimes(1);
       expect(txHandler1.handleTransaction).toHaveBeenCalledWith(
+>>>>>>> main
         mockTxEvent,
       );
 
@@ -78,6 +101,10 @@ describe('agents', () => {
 
       expect(txHandler3.handleTransaction).toHaveBeenCalledTimes(1);
       expect(txHandler3.handleTransaction).toHaveBeenCalledWith(
+        mockTxEvent,
+      );
+      expect(mockOptimisticOracleAgent.handleTransaction).toHaveBeenCalledTimes(1);
+      expect(mockOptimisticOracleAgent.handleTransaction).toHaveBeenCalledWith(
         mockTxEvent,
       );
     });

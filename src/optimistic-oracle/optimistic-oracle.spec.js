@@ -3,7 +3,11 @@ const { getAbi, getAddress } = require('@uma/contracts-node');
 const {
   Finding, FindingSeverity, FindingType, createTransactionEvent,
 } = require('forta-agent');
-const { provideHandleTransaction, createPriceFeed } = require('./optimistic-oracle');
+const {
+  initialize,
+  provideHandleTransaction,
+  createPriceFeed,
+} = require('./optimistic-oracle');
 
 // load functions from event manipulation library
 const { createLog, createReceipt } = require('../event-utils');
@@ -35,7 +39,7 @@ const BAD_IDENTIFIER_DATA = '0x4241440000000000000000000000000000000000000000000
 
 const MOCK_PRICE = '99999999999999999999';
 
-// stores the optimistic oracle contract address
+// store the contract address (retrived later)
 let optimisticOracleAddress;
 
 const optimisticOracleAbi = getAbi('OptimisticOracle');
@@ -58,9 +62,6 @@ async function mockGetPriceBadResponse(identifier) {
 
 describe('UMA optimistic oracle validation agent', () => {
   let handleTransaction;
-  
-  // do agent-specific initialization
-  initialize();
 
   it('should create price feeds for supported assets w/o throwing any exceptions', async () => {
     // supported list of assets
@@ -158,6 +159,15 @@ describe('UMA optimistic oracle validation agent', () => {
   });
 
   it('returns an empty finding if contract address does not match', async () => {
+    // do agent initialization
+    await initialize();
+
+    // get the optimistic oracle address (this will be used in all tests)
+    // this needs to be done within an async function
+    const optimisticOracleAddressPromise = getAddress('OptimisticOracle', CHAIN_ID);
+    optimisticOracleAddress = await optimisticOracleAddressPromise;
+    expect(optimisticOracleAddress).toBeDefined();
+
     const txEvent = createTransactionEvent({
       receipt: {
         logs: [

@@ -1,8 +1,13 @@
 // transaction handlers
 const adminEvents = require('./admin-events/admin-events');
+<<<<<<< HEAD
+const deployerWatch = require('./deployer-watch');
+const monitorMintCalls = require('./monitor-mint-calls');
+const optimisticOracle = require('./optimistic-oracle/optimistic-oracle');
+=======
 const deployerWatch = require('./deployer-watch/deployer-watch');
 const monitorMintCalls = require('./monitor-mint-calls/monitor-mint-calls');
-const optimisticOracle = require('./optimistic-oracle/optimistic-oracle');
+>>>>>>> main
 
 // block handlers
 // <empty>
@@ -11,7 +16,6 @@ const txHandlers = [
   adminEvents,
   deployerWatch,
   monitorMintCalls,
-  optimisticOracle,
 ];
 
 const blockHandlers = [
@@ -59,7 +63,16 @@ module.exports = {
   provideInitialize,
   initialize: provideInitialize([...txHandlers, ...blockHandlers]),
   provideHandleTransaction,
+<<<<<<< HEAD
+  handleTransaction: provideHandleTransaction([
+    adminEvents,
+    deployerWatch,
+    monitorMintCalls,
+    optimisticOracle,
+  ]),
+=======
   handleTransaction: provideHandleTransaction(txHandlers),
   provideHandleBlock,
   handleBlock: provideHandleBlock(blockHandlers),
+>>>>>>> main
 };

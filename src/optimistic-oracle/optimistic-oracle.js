@@ -141,7 +141,9 @@ async function getPrice(identifier) {
 async function initialize() {
   // get the Optimistic Oracle contract address for mainnet
   // the address returned by the promise will be lowercase
+  console.log("address before: " + optimisticOracleAddress);
   optimisticOracleAddress = await getAddress('OptimisticOracle', CHAIN_ID);
+  console.log("address after: " + optimisticOracleAddress);
 }
 
 function provideHandleTransaction(getPriceFunc = getPrice) {
