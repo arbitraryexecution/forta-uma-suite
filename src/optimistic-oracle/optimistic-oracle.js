@@ -31,18 +31,16 @@ const {
 
 const CHAIN_ID = 1; // mainnet
 
-// stores the optimistic oracle contract address
+// optimistic oracle contract address and interface
+// (set during initialization)
 let optimisticOracleAddress;
+let optimisticOracleIface;
 
 logger.silent = true;
 
 // initialize global constants, web3 gets populated on initialization
 const getTime = () => Math.round(new Date().getTime() / 1000);
 const web3 = new Web3(new Web3.providers.HttpProvider(getJsonRpcUrl()));
-
-// create ethers interface object
-const optimisticOracleAbi = getAbi('OptimisticOracle');
-const iface = new ethers.utils.Interface(optimisticOracleAbi);
 
 /*
 Events we are interested in:
@@ -146,6 +144,18 @@ async function initialize() {
   // get the Optimistic Oracle contract address for mainnet
   // the address returned by the promise will be lowercase
   optimisticOracleAddress = await getAddress('OptimisticOracle', CHAIN_ID);
+
+  // create ethers interface object
+  const optimisticOracleAbi = getAbi('OptimisticOracle');
+  optimisticOracleIface = new ethers.utils.Interface(optimisticOracleAbi);
+
+  // return initialization data that will be utilized by tests
+  const init = {
+    optimisticOracleAddress,
+    optimisticOracleIface,
+  };
+
+  return init;
 }
 
 function provideHandleTransaction(getPriceFunc = getPrice) {
@@ -160,7 +170,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
     if (oracleLogs === []) return findings;
 
     // parse oracle logs for our target events:  RequestPrice and ProposePrice
-    const parse = (log) => iface.parseLog(log);
+    const parse = (log) => optimisticOracleIface.parseLog(log);
     const filter = (log) => eventNames.indexOf(log.name) !== -1;
     const parsedLogs = oracleLogs.map(parse).filter(filter);
 
