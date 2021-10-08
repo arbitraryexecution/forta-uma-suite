@@ -1,8 +1,8 @@
 const ethers = require('ethers');
 const { getAddress } = require('@uma/contracts-node');
-const { createTransactionEvent } = require('forta-agent');
+const { Finding, createTransactionEvent } = require('forta-agent');
 
-const { createAlert, handleTransaction, initialize } = require('./admin-events');
+const { handleTransaction, initialize } = require('./admin-events');
 
 const CHAIN_ID = 1;
 const votingAddressPromise = getAddress('Voting', CHAIN_ID);
@@ -11,8 +11,8 @@ const votingAddressPromise = getAddress('Voting', CHAIN_ID);
 describe('admin event monitoring', () => {
   describe('handleTransaction', () => {
     it('returns empty findings if contract address does not match', async () => {
-     // Initialize the Handler
-     await initialize();
+      // Initialize the Handler
+      await initialize();
 
       // logs data for test case:  no address match + no topic match
       const logsNoMatchAddress = [
@@ -76,9 +76,6 @@ describe('admin event monitoring', () => {
       await initialize();
 
       const votingContract = (await votingAddressPromise).toLowerCase();
-      const eventName = 'VoteCommitted';
-      const contractName = 'Voting';
-      const contractAddress = votingContract;
 
       // Logs data for test case: address match + topic match (should trigger a finding)
       const logsMatchEvent = [
@@ -103,15 +100,29 @@ describe('admin event monitoring', () => {
 
       // Run agent
       const findings = await handleTransaction(txEvent);
-      const args = {
-        voter: '0x0000000000000000000000000000000000000000',
-        roundId: '0',
-        identifier: '0x0000000000000000000000000000000000000000000000000000000000000000',
-        time: '0',
-        ancillaryData: '0x',
-      };
-      const alert = [createAlert(eventName, contractName, contractAddress, 'Info', 'Low', args)];
-      expect(findings).toStrictEqual(alert);
+      const testFindings = [Finding.fromObject({
+        name: 'UMA Admin Event',
+        description: 'The VoteCommitted event was emitted by the Voting contract',
+        alertId: 'AE-UMA-ADMIN-EVENT',
+        type: 4,
+        severity: 2,
+        everestId: '0x9ed51155fa709f1bc3b26b8fec03df7010177362',
+        protocol: 'uma',
+        metadata: {
+          contractAddress: '0x8b1631ab830d11531ae83725fda4d86012eccd77',
+          contractName: 'Voting',
+          eventName: 'VoteCommitted',
+          strippedArgs: {
+            ancillaryData: '0x',
+            identifier: '0x0000000000000000000000000000000000000000000000000000000000000000',
+            roundId: '0',
+            time: '0',
+            voter: '0x0000000000000000000000000000000000000000',
+          },
+        },
+      })];
+
+      expect(findings).toStrictEqual(testFindings);
     });
   });
 });
