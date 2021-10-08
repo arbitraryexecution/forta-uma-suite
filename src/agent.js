@@ -2,17 +2,22 @@
 const adminEvents = require('./admin-events/admin-events');
 const deployerWatch = require('./deployer-watch/deployer-watch');
 const monitorMintCalls = require('./monitor-mint-calls/monitor-mint-calls');
+const optimisticOracle = require('./optimistic-oracle/optimistic-oracle');
 
 // block handlers
-// <empty>
+const liquidator = require('./bot-handlers/liquidator');
+const disputer = require('./bot-handlers/disputer');
 
 const txHandlers = [
   adminEvents,
   deployerWatch,
   monitorMintCalls,
+  optimisticOracle,
 ];
 
 const blockHandlers = [
+  liquidator,
+  disputer,
 ];
 
 // returns findings over all txHandler's handleTransaction functions
