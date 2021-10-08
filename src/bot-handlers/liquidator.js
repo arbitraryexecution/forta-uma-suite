@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 const {
   Finding, FindingSeverity, FindingType,
 } = require('forta-agent');
@@ -13,10 +14,13 @@ const {
   initializeContracts, checkIsExpiredOrShutdown,
 } = require('./initialization');
 
+// initialized data
+const initializeData = {};
+
 // formats provided data into a Forta alert
 function createAlert(financialContractClient, position, price) {
   return Finding.fromObject({
-    name: `Liquidator alert`,
+    name: 'Liquidator alert',
     description: `Position is under-collateralized and can be liquidated on contract \
     ${financialContractClient._address}`,
     alertId: 'AE-UMA-LIQUIDATABLE-POSITION',
@@ -57,18 +61,30 @@ async function checkIfLiquidatable({ financialContractClient, priceFeed }) {
   );
 }
 
-function provideHandleBlock(contracts) {
+function provideHandleBlock(data) {
   return async function handleBlock() {
+    // ensure initialization worked
+    if (!data?.contracts) throw new Error('Running handler without initializing first');
+
     // iterate through each financial contract and check if it is liquidatable
     // awaiting contracts promise is a no op after it resolves the first time
-    const promises = (await contracts).map((contract) => checkIfLiquidatable(contract));
+    const promises = (await data.contracts).map((contract) => checkIfLiquidatable(contract));
 
     return (await Promise.all(promises)).flat();
   };
 }
 
+function provideInitialize(data) {
+  return async function initialize() {
+    // eslint-disable-next-line no-param-reassign
+    data.contracts = initializeContracts(contractData);
+  };
+}
+
 module.exports = {
+  provideInitialize,
+  initialize: provideInitialize(initializeData),
   provideHandleBlock,
-  handleBlock: provideHandleBlock(initializeContracts(contractData)),
+  handleBlock: provideHandleBlock(initializeData),
   createAlert,
 };

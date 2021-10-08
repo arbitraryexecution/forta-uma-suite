@@ -286,10 +286,12 @@ describe('liquidator-test.js', () => {
           priceFeedMock = new PriceFeedMock(undefined, undefined, undefined, testConfig.priceFeedDecimals);
 
           // initialize handler
-          handleBlock = provideHandleBlock([{
-            financialContractClient,
-            priceFeed: priceFeedMock,
-          }]);
+          handleBlock = provideHandleBlock({
+            contracts: [{
+              financialContractClient,
+              priceFeed: priceFeedMock,
+            }],
+          });
         });
 
         versionedIt([{ contractType: 'any', contractVersion: 'any' }])(
