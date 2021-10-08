@@ -23,6 +23,7 @@ function createAlert(financialContractClient, position, price) {
     name: 'Liquidator alert',
     description: `Position is under-collateralized and can be liquidated on contract \
     ${financialContractClient._address}`,
+    protocol: 'uma',
     alertId: 'AE-UMA-LIQUIDATABLE-POSITION',
     severity: FindingSeverity.Medium,
     type: FindingType.Info,
