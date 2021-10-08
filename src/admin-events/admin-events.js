@@ -74,18 +74,17 @@ async function initialize() {
   const contractNames = Object.keys(adminEvents);
 
   // Get and store the information about each contract
-  for (let i = 0; i < contractNames.length; i++)
-  {
+  for (let i = 0; i < contractNames.length; i++) {
     const name = contractNames[i];
     const abi = getAbi(name);
     const iface = new ethers.utils.Interface(abi);
     const address = (await getAddress(name, CHAIN_ID)).toLowerCase();
 
     const contract = {
-      "name" : name,
-      "address" : address,
-      "iface" : iface,
-    }
+      name,
+      address,
+      iface,
+    };
     contracts.push(contract);
   }
 }
@@ -100,7 +99,10 @@ function handleTransaction(txEvent) {
     const eventNames = Object.keys(events);
 
     // Filter down to only the events we want to alert on
-    const parsedLogs = filterAndParseLogs(txEvent.logs, contract.address, contract.iface, eventNames);
+    const parsedLogs = filterAndParseLogs(txEvent.logs,
+      contract.address,
+      contract.iface,
+      eventNames);
 
     // Alert on each item in parsedLogs
     parsedLogs.forEach((parsedLog) => {
