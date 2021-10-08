@@ -31,13 +31,7 @@ const {
 
 const CHAIN_ID = 1; // mainnet
 
-// stores optimistic oracle contract address and interface
-// (set during initialization)
-const optimisticOracle = {
-  address: undefined,
-  abi: undefined,
-  iface: undefined,
-};
+const initializeData = {};
 
 logger.silent = true;
 
@@ -140,34 +134,34 @@ async function getPrice(identifier) {
 }
 
 // initialize() performs one-time configuration at startup
-// provideInitialize() allows tests to override the configuration data
-function provideInitialize(initConfig) {
+// provideInitialize() returns initialize which will update a specified object
+function provideInitialize(data) {
   return async function initialize() {
-    // get the Optimistic Oracle contract address for mainnet
-    // the address returned by the promise will be lowercase
-    optimisticOracle.address = await getAddress('OptimisticOracle', CHAIN_ID);
-
-    // create ethers interface object
-    optimisticOracle.abi = getAbi('OptimisticOracle');
+    const optimisticOracle = {
+      // get the Optimistic Oracle contract address for mainnet
+      // the address returned by the promise will be lowercase
+      address: await getAddress('OptimisticOracle', CHAIN_ID),
+      // create ethers interface object
+      abi: getAbi('OptimisticOracle'),
+    };
+    // create and add the interface
     optimisticOracle.iface = new ethers.utils.Interface(optimisticOracle.abi);
 
-    // override any values passed in by tests
-    if (initConfig) {
-      Object.keys(optimisticOracle).forEach((key) => {
-        if (initConfig[key]) {
-          optimisticOracle[key] = initConfig[key];
-        }
-      });
-    }
-
-    // return the initialization data in case tests did not override it and need access to it
-    return optimisticOracle;
+    /* eslint-disable no-param-reassign */
+    data.optimisticOracle = optimisticOracle;
+    data.createPriceFeed = createPriceFeed;
+    data.getPrice = getPrice;
+    /* eslint-enable no-param-reassign */
   };
 }
 
-// provideHandleTransaction() allows tests to supply their own mock getPrice function
-function provideHandleTransaction(getPriceFunc = getPrice) {
+function provideHandleTransaction(data) {
   return async function handleTransaction(txEvent) {
+    const { optimisticOracle, getPrice: getPriceFunc } = data;
+    if (!optimisticOracle || !getPrice) {
+      throw new Error('handleTransaction was called before initialization');
+    }
+
     const findings = [];
 
     // filter only logs that match the optimistic oracle address
@@ -183,10 +177,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
     const parsedLogs = oracleLogs.map(parse).filter(filter);
 
     // process the target events
-
-    /* eslint-disable no-await-in-loop */
-    for (let i = 0; i < parsedLogs.length; i++) {
-      const log = parsedLogs[i];
+    await Promise.all(parsedLogs.map(async (log) => {
       if (log.name === 'RequestPrice') {
         const { identifier, requester } = log.args;
 
@@ -199,7 +190,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
           price = await getPriceFunc(idString);
         } catch (err) {
           console.error(err);
-          continue;
+          return;
         }
 
         // report the price obtained as a finding
@@ -233,7 +224,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
           price = await getPriceFunc(idString);
         } catch (err) {
           console.error(err);
-          continue;
+          return;
         }
 
         const proposedPrice = new BigNumber(proposedPriceRaw.toString());
@@ -270,7 +261,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
           },
         }));
       }
-    }
+    }));
 
     return findings;
   };
@@ -278,8 +269,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
 
 module.exports = {
   provideInitialize,
-  initalize: provideInitialize(),
+  initialize: provideInitialize(initializeData),
   provideHandleTransaction,
-  handleTransaction: provideHandleTransaction(),
-  createPriceFeed,
+  handleTransaction: provideHandleTransaction(initializeData),
 };

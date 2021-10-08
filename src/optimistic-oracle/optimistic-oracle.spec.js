@@ -5,7 +5,6 @@ const {
 const {
   provideInitialize,
   provideHandleTransaction,
-  createPriceFeed,
 } = require('./optimistic-oracle');
 
 // load functions from event manipulation library
@@ -37,9 +36,6 @@ const BAD_IDENTIFIER_DATA = '0x4241440000000000000000000000000000000000000000000
 
 const MOCK_PRICE = '99999999999999999999';
 
-// contract address and interface will be set when initialize() is called by us
-let optimisticOracle;
-
 // mock the getPrice() function from optimistic-oracle.js
 async function mockGetPrice(identifier) {
   if (identifier === BTC_IDENTIFIER_STRING) {
@@ -55,6 +51,19 @@ async function mockGetPriceBadResponse(identifier) {
 
 describe('UMA optimistic oracle validation agent', () => {
   let handleTransaction;
+  let initializeData;
+  let optimisticOracle;
+
+  beforeEach(async () => {
+    // invoke the handler's initialize function and get the optimistic oracle address and iface
+    // (this will be used in all subsequent tests)
+    initializeData = {};
+    await (provideInitialize(initializeData))();
+
+    handleTransaction = provideHandleTransaction(initializeData);
+
+    ({ optimisticOracle } = initializeData);
+  });
 
   it('should create price feeds for supported assets w/o throwing any exceptions', async () => {
     // supported list of assets
@@ -145,7 +154,7 @@ describe('UMA optimistic oracle validation agent', () => {
     // iterate idList and attempt to create a price feed for each entry
     const promises = idList.map((identifier) => {
       args.identifier = identifier;
-      return createPriceFeed(args);
+      return initializeData.createPriceFeed(args);
     });
 
     // if any price feed cannot be created, this will throw an exception
@@ -153,13 +162,8 @@ describe('UMA optimistic oracle validation agent', () => {
   });
 
   it('returns an empty finding if contract address does not match', async () => {
-    // invoke the handler's initialize function and get the optimistic oracle address and iface
-    // (this will be used in all subsequent tests)
-    const initialize = provideInitialize();
-    optimisticOracle = await initialize();
     expect(optimisticOracle.address).toBeDefined();
     expect(optimisticOracle.iface).toBeDefined();
-
     const txEvent = createTransactionEvent({
       receipt: {
         logs: [
@@ -170,7 +174,7 @@ describe('UMA optimistic oracle validation agent', () => {
       },
     });
 
-    handleTransaction = provideHandleTransaction(mockGetPrice);
+    initializeData.getPrice = mockGetPrice;
     const findings = await handleTransaction(txEvent);
 
     expect(findings).toStrictEqual([]);
@@ -200,7 +204,7 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockGetPrice);
+    initializeData.getPrice = mockGetPrice;
     const findings = await handleTransaction(txEvent);
 
     expect(findings).toStrictEqual([]);
@@ -230,7 +234,7 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockGetPriceBadResponse);
+    initializeData.getPrice = mockGetPriceBadResponse;
     const findings = await handleTransaction(txEvent);
 
     expect(findings).toStrictEqual([]);
@@ -262,7 +266,7 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockGetPrice);
+    initializeData.getPrice = mockGetPrice;
     const findings = await handleTransaction(txEvent);
 
     expect(findings).toStrictEqual([
@@ -312,7 +316,7 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockGetPrice);
+    initializeData.getPrice = mockGetPrice;
     const findings = await handleTransaction(txEvent);
 
     expect(findings).toStrictEqual([
@@ -365,7 +369,7 @@ describe('UMA optimistic oracle validation agent', () => {
 
     const txEvent = createTransactionEvent({ receipt });
 
-    handleTransaction = provideHandleTransaction(mockGetPrice);
+    initializeData.getPrice = mockGetPrice;
     const findings = await handleTransaction(txEvent);
 
     expect(findings).toStrictEqual([
