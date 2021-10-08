@@ -74,8 +74,7 @@ async function initialize() {
   const contractNames = Object.keys(adminEvents);
 
   // Get and store the information about each contract
-  for (let i = 0; i < contractNames.length; i++) {
-    const name = contractNames[i];
+  await Promise.all(contractNames.map(async (name) => {
     const abi = getAbi(name);
     const iface = new ethers.utils.Interface(abi);
     const address = (await getAddress(name, CHAIN_ID)).toLowerCase();
@@ -86,7 +85,7 @@ async function initialize() {
       iface,
     };
     contracts.push(contract);
-  }
+  }));
 }
 
 function handleTransaction(txEvent) {
