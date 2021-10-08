@@ -121,7 +121,6 @@ function handleTransaction(txEvent) {
 }
 
 module.exports = {
-  createAlert,
   handleTransaction,
   initialize,
 };
