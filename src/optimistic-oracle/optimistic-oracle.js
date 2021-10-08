@@ -31,10 +31,12 @@ const {
 
 const CHAIN_ID = 1; // mainnet
 
-// optimistic oracle contract address and interface
+// stores optimistic oracle contract address and interface
 // (set during initialization)
-let optimisticOracleAddress;
-let optimisticOracleIface;
+let optimisticOracle = {
+  address: undefined,
+  abi: undefined,
+};
 
 logger.silent = true;
 
@@ -136,28 +138,28 @@ async function getPrice(identifier) {
   return price;
 }
 
-function getOracleAddress() {
-  return optimisticOracleAddress;
-}
+// initialize() performs one-time configuration at startup
+// provideInitialize() allows tests to override the configuration data
+function provideInitialize(initConfig) {
+  return async function initialize() {
+    if (initConfig) {
+      optimisticOracle = { ...initConfig };
+    } else {
+      // get the Optimistic Oracle contract address for mainnet
+      // the address returned by the promise will be lowercase
+      optimisticOracle.address = await getAddress('OptimisticOracle', CHAIN_ID);
 
-async function initialize() {
-  // get the Optimistic Oracle contract address for mainnet
-  // the address returned by the promise will be lowercase
-  optimisticOracleAddress = await getAddress('OptimisticOracle', CHAIN_ID);
+      // create ethers interface object
+      const optimisticOracleAbi = getAbi('OptimisticOracle');
+      optimisticOracle.iface = new ethers.utils.Interface(optimisticOracleAbi);
+    }
 
-  // create ethers interface object
-  const optimisticOracleAbi = getAbi('OptimisticOracle');
-  optimisticOracleIface = new ethers.utils.Interface(optimisticOracleAbi);
-
-  // return initialization data that will be utilized by tests
-  const init = {
-    optimisticOracleAddress,
-    optimisticOracleIface,
+    // return the initialization data in case tests did not override it and need access to it
+    return optimisticOracle;
   };
-
-  return init;
 }
 
+// provideHandleTransaction() allows tests to supply their own mock getPrice function
 function provideHandleTransaction(getPriceFunc = getPrice) {
   return async function handleTransaction(txEvent) {
     const findings = [];
@@ -165,16 +167,17 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
     // filter only logs that match the optimistic oracle address
     // test transaction for ProposePrice event:
     // npx forta-agent run --tx 0x76ff352b2665886a2a3d3b16fe0fa41f61e4ffc0824b3a6734383d397187f53f
-    const oracleLogs = txEvent.logs.filter((log) => log.address === optimisticOracleAddress);
+    const oracleLogs = txEvent.logs.filter((log) => log.address === optimisticOracle.address);
 
     if (oracleLogs === []) return findings;
 
     // parse oracle logs for our target events:  RequestPrice and ProposePrice
-    const parse = (log) => optimisticOracleIface.parseLog(log);
+    const parse = (log) => optimisticOracle.iface.parseLog(log);
     const filter = (log) => eventNames.indexOf(log.name) !== -1;
     const parsedLogs = oracleLogs.map(parse).filter(filter);
 
     // process the target events
+
     /* eslint-disable no-await-in-loop */
     for (let i = 0; i < parsedLogs.length; i++) {
       const log = parsedLogs[i];
@@ -268,9 +271,9 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
 }
 
 module.exports = {
-  initialize,
+  provideInitialize,
+  initalize: provideInitialize(),
   provideHandleTransaction,
   handleTransaction: provideHandleTransaction(),
   createPriceFeed,
-  getOracleAddress,
 };

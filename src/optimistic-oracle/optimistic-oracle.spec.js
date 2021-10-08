@@ -3,7 +3,7 @@ const {
   Finding, FindingSeverity, FindingType, createTransactionEvent,
 } = require('forta-agent');
 const {
-  initialize,
+  provideInitialize,
   provideHandleTransaction,
   createPriceFeed,
 } = require('./optimistic-oracle');
@@ -38,8 +38,7 @@ const BAD_IDENTIFIER_DATA = '0x4241440000000000000000000000000000000000000000000
 const MOCK_PRICE = '99999999999999999999';
 
 // contract address and interface will be set when initialize() is called by us
-let optimisticOracleAddress;
-let optimisticOracleIface;
+let optimisticOracle;
 
 // mock the getPrice() function from optimistic-oracle.js
 async function mockGetPrice(identifier) {
@@ -156,9 +155,10 @@ describe('UMA optimistic oracle validation agent', () => {
   it('returns an empty finding if contract address does not match', async () => {
     // invoke the handler's initialize function and get the optimistic oracle address
     // (this will be used in all subsequent tests)
-    const init = await initialize();
-    ({ optimisticOracleAddress, optimisticOracleIface } = init);
-    expect(optimisticOracleAddress).toBeDefined();
+    const initialize = provideInitialize();
+    optimisticOracle = await initialize();
+    expect(optimisticOracle.address).toBeDefined();
+    expect(optimisticOracle.iface).toBeDefined();
 
     const txEvent = createTransactionEvent({
       receipt: {
@@ -182,7 +182,7 @@ describe('UMA optimistic oracle validation agent', () => {
     // build a log that encodes the data for a RequestPrice event
     // the agent will decode 'requester' and 'currency' from the data
     const log = createLog(
-      optimisticOracleIface.getEvent('RequestPrice'),
+      optimisticOracle.iface.getEvent('RequestPrice'),
       {
         requester,
         identifier: BAD_IDENTIFIER_DATA,
@@ -192,7 +192,7 @@ describe('UMA optimistic oracle validation agent', () => {
         reward: 0,
         finalFee: 0,
       },
-      { address: optimisticOracleAddress },
+      { address: optimisticOracle.address },
     );
 
     // build a receipt
@@ -212,7 +212,7 @@ describe('UMA optimistic oracle validation agent', () => {
     // build a log that encodes the data for a RequestPrice event
     // the agent will decode 'identifier' and 'requester' from the data
     const log = createLog(
-      optimisticOracleIface.getEvent('RequestPrice'),
+      optimisticOracle.iface.getEvent('RequestPrice'),
       {
         requester,
         identifier: BTC_IDENTIFIER_DATA,
@@ -222,7 +222,7 @@ describe('UMA optimistic oracle validation agent', () => {
         reward: 0,
         finalFee: 0,
       },
-      { address: optimisticOracleAddress },
+      { address: optimisticOracle.address },
     );
 
     // build a receipt
@@ -244,7 +244,7 @@ describe('UMA optimistic oracle validation agent', () => {
     // build a log that encodes the data for a RequestPrice event
     // the agent will decode 'identifier' and 'requester' from the data
     const log = createLog(
-      optimisticOracleIface.getEvent('RequestPrice'),
+      optimisticOracle.iface.getEvent('RequestPrice'),
       {
         requester,
         identifier: BTC_IDENTIFIER_DATA,
@@ -254,7 +254,7 @@ describe('UMA optimistic oracle validation agent', () => {
         reward: 0,
         finalFee: 0,
       },
-      { address: optimisticOracleAddress },
+      { address: optimisticOracle.address },
     );
 
     // build a receipt
@@ -293,7 +293,7 @@ describe('UMA optimistic oracle validation agent', () => {
     // build a log that encodes the data for a ProposePrice event
     // the agent will decode 'identifier', 'requester', 'proposer', 'proposedPrice'
     const log = createLog(
-      optimisticOracleIface.getEvent('ProposePrice'),
+      optimisticOracle.iface.getEvent('ProposePrice'),
       {
         requester,
         proposer,
@@ -304,7 +304,7 @@ describe('UMA optimistic oracle validation agent', () => {
         expirationTimestamp: 0,
         currency: ZERO_ADDRESS,
       },
-      { address: optimisticOracleAddress },
+      { address: optimisticOracle.address },
     );
 
     // build a receipt
@@ -346,7 +346,7 @@ describe('UMA optimistic oracle validation agent', () => {
     // build a log that encodes the data for a ProposePrice event
     // the agent will decode 'identifier', 'requester', 'proposer', 'proposedPrice' from the data
     const log = createLog(
-      optimisticOracleIface.getEvent('ProposePrice'),
+      optimisticOracle.iface.getEvent('ProposePrice'),
       {
         requester,
         proposer,
@@ -357,7 +357,7 @@ describe('UMA optimistic oracle validation agent', () => {
         expirationTimestamp: 0,
         currency: ZERO_ADDRESS,
       },
-      { address: optimisticOracleAddress },
+      { address: optimisticOracle.address },
     );
 
     // build a receipt
