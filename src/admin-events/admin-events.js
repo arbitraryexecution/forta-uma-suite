@@ -70,21 +70,15 @@ async function initialize() {
   // Constant for getAddress
   const CHAIN_ID = 1;
 
-  // get contract names for mapping to events
+  // Get the contract names that have events we wish to monitor
   const contractNames = Object.keys(adminEvents);
 
-  // Get the information about each contract we wish to monitor
+  // Get and store the information about each contract
   for (let i = 0; i < contractNames.length; i++)
   {
     const name = contractNames[i];
-
-    // Get the abi for the contract
     const abi = getAbi(name);
-
-    // create ethers interface object
     const iface = new ethers.utils.Interface(abi);
-
-    // Get the contract Address for each contract
     const address = (await getAddress(name, CHAIN_ID)).toLowerCase();
 
     const contract = {
@@ -92,7 +86,6 @@ async function initialize() {
       "address" : address,
       "iface" : iface,
     }
-
     contracts.push(contract);
   }
 }
