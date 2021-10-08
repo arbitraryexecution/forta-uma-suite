@@ -7,6 +7,7 @@ the following handlers:
 
 - admin-events
 - deployer-watch
+- disputer
 - liquidator
 - monitor-mint-calls
 
@@ -34,6 +35,12 @@ the following handlers:
   - Severity is set to value in admin-events.json
   - Type is set to value in admin-events.json
   - Metadata field contains contract name, contract address and event name
+
+- AE-UMA-DISPUTE
+  - Fired when a liquidation can be disputed
+  - Severity is always "medium"
+  - Type is always set to "info"
+  - Metadata field contains position price, scaled price, and liquidation data
 
 - AE-UMA-LIQUIDATABLE-POSITION
   - Fired when a monitored contract has a liquidatable position due to price changes or invalid withdrawals

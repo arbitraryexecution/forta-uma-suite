@@ -5,6 +5,7 @@ const monitorMintCalls = require('./monitor-mint-calls/monitor-mint-calls');
 
 // block handlers
 const liquidator = require('./bot-handlers/liquidator');
+const disputer = require('./bot-handlers/disputer');
 
 const txHandlers = [
   adminEvents,
@@ -14,6 +15,7 @@ const txHandlers = [
 
 const blockHandlers = [
   liquidator,
+  disputer,
 ];
 
 // returns findings over all txHandler's handleTransaction functions
