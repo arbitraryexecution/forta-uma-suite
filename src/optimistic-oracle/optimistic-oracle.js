@@ -71,71 +71,72 @@ function calculatePercentError(first, second) {
   return delta.div(first).multipliedBy(100);
 }
 
+// creates a price feed using the UMA library
+async function createPriceFeed({ identifier, config }) {
+  // try to create a price feed
+  // this typically fails if the target asset requires a specific API key,
+  // or the lookback value has not been set
+  let priceFeed = await createReferencePriceFeedForFinancialContract(
+    logger,
+    web3,
+    new Networker(),
+    getTime,
+    undefined, // no address needed since we're passing identifier explicitly
+    config,
+    identifier,
+  ).catch();
+
+  // if the first attempt failed, set a lookback value and try again
+  if (!priceFeed) {
+    priceFeed = await createReferencePriceFeedForFinancialContract(
+      logger,
+      web3,
+      new Networker(),
+      getTime,
+      undefined, // no address needed since we're passing identifier explicitly
+      { lookback: 0, ...config },
+      identifier,
+    ).catch();
+  }
+
+  if (!priceFeed) {
+    throw new Error(`Unable to create price feed for identifier '${identifier}'`);
+  }
+
+  return priceFeed;
+}
+
+// get the price of an asset based on the UMA identifier string
+//
+// example identifiers: "BTC-BASIS-3M/USDC", "STABLESPREAD/USDC_18DEC"
+// this identifier will be used as a lookup in DefaultPriceFeedConfigs.ts in the UMA lib
+async function getPrice(identifier) {
+  // if the user has not set a specific API key in the admin-events.json file, set it to undefined
+  // many assets prices can be obtained using cryptowatch w/o any API key at all (rate limited)
+  const args = {
+    identifier,
+    config: {
+      cryptowatchApiKey: CRYPTOWATCH_API_KEY || undefined,
+      defipulseApiKey: DEFIPULSE_API_KEY || undefined,
+      tradermadeApiKey: TRADERMADE_API_KEY || undefined,
+      cmcApiKey: CMC_API_KEY || undefined,
+    },
+  };
+
+  // attempt to obtain a UMA price feed object
+  const priceFeed = await createPriceFeed(args);
+
+  // make an external request to get the price value
+  await priceFeed.update();
+  const price = (await priceFeed.getCurrentPrice()).toString();
+
+  return price;
+}
+
 // initialize() performs one-time configuration at startup
 // provideInitialize() returns initialize which will update a specified object
 function provideInitialize(data) {
   return async function initialize() {
-    // creates a price feed using the UMA library
-    async function createPriceFeed({ identifier, config }) {
-      // try to create a price feed
-      // this typically fails if the target asset requires a specific API key,
-      // or the lookback value has not been set
-      let priceFeed = await createReferencePriceFeedForFinancialContract(
-        logger,
-        web3,
-        new Networker(),
-        getTime,
-        undefined, // no address needed since we're passing identifier explicitly
-        config,
-        identifier,
-      ).catch();
-
-      // if the first attempt failed, set a lookback value and try again
-      if (!priceFeed) {
-        priceFeed = await createReferencePriceFeedForFinancialContract(
-          logger,
-          web3,
-          new Networker(),
-          getTime,
-          undefined, // no address needed since we're passing identifier explicitly
-          { lookback: 0, ...config },
-          identifier,
-        ).catch();
-      }
-
-      if (!priceFeed) {
-        throw new Error(`Unable to create price feed for identifier '${identifier}'`);
-      }
-
-      return priceFeed;
-    }
-
-    // get the price of an asset based on the UMA identifier string
-    //
-    // example identifiers: "BTC-BASIS-3M/USDC", "STABLESPREAD/USDC_18DEC"
-    // this identifier will be used as a lookup in DefaultPriceFeedConfigs.ts in the UMA lib
-    async function getPrice(identifier) {
-      // if the user has not set a specific API key in the admin-events.json file, set it to undefined
-      // many assets prices can be obtained using cryptowatch w/o any API key at all (rate limited)
-      const args = {
-        identifier,
-        config: {
-          cryptowatchApiKey: CRYPTOWATCH_API_KEY || undefined,
-          defipulseApiKey: DEFIPULSE_API_KEY || undefined,
-          tradermadeApiKey: TRADERMADE_API_KEY || undefined,
-          cmcApiKey: CMC_API_KEY || undefined,
-        },
-      };
-
-      // attempt to obtain a UMA price feed object
-      const priceFeed = await createPriceFeed(args);
-
-      // make an external request to get the price value
-      await priceFeed.update();
-      const price = (await priceFeed.getCurrentPrice()).toString();
-
-      return price;
-    }
 
     const optimisticOracle = {
       // get the Optimistic Oracle contract address for mainnet
@@ -155,7 +156,7 @@ function provideInitialize(data) {
 
 function provideHandleTransaction(data) {
   return async function handleTransaction(txEvent) {
-    const { optimisticOracle, getPrice } = data;
+    const { optimisticOracle, getPrice:getPriceFunc } = data;
 
     const findings = [];
 
@@ -185,7 +186,7 @@ function provideHandleTransaction(data) {
         // lookup the price
         let price;
         try {
-          price = await getPrice(idString);
+          price = await getPriceFunc(idString);
         } catch (err) {
           console.error(err);
           continue;
@@ -219,7 +220,7 @@ function provideHandleTransaction(data) {
         // lookup the price
         let price;
         try {
-          price = await getPrice(idString);
+          price = await getPriceFunc(idString);
         } catch (err) {
           console.error(err);
           continue;
