@@ -153,7 +153,7 @@ describe('UMA optimistic oracle validation agent', () => {
   });
 
   it('returns an empty finding if contract address does not match', async () => {
-    // invoke the handler's initialize function and get the optimistic oracle address
+    // invoke the handler's initialize function and get the optimistic oracle address and iface
     // (this will be used in all subsequent tests)
     const initialize = provideInitialize();
     optimisticOracle = await initialize();

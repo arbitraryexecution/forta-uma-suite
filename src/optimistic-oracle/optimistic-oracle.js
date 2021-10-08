@@ -33,9 +33,10 @@ const CHAIN_ID = 1; // mainnet
 
 // stores optimistic oracle contract address and interface
 // (set during initialization)
-let optimisticOracle = {
+const optimisticOracle = {
   address: undefined,
   abi: undefined,
+  iface: undefined,
 };
 
 logger.silent = true;
@@ -142,16 +143,21 @@ async function getPrice(identifier) {
 // provideInitialize() allows tests to override the configuration data
 function provideInitialize(initConfig) {
   return async function initialize() {
-    if (initConfig) {
-      optimisticOracle = { ...initConfig };
-    } else {
-      // get the Optimistic Oracle contract address for mainnet
-      // the address returned by the promise will be lowercase
-      optimisticOracle.address = await getAddress('OptimisticOracle', CHAIN_ID);
+    // get the Optimistic Oracle contract address for mainnet
+    // the address returned by the promise will be lowercase
+    optimisticOracle.address = await getAddress('OptimisticOracle', CHAIN_ID);
 
-      // create ethers interface object
-      const optimisticOracleAbi = getAbi('OptimisticOracle');
-      optimisticOracle.iface = new ethers.utils.Interface(optimisticOracleAbi);
+    // create ethers interface object
+    optimisticOracle.abi = getAbi('OptimisticOracle');
+    optimisticOracle.iface = new ethers.utils.Interface(optimisticOracle.abi);
+
+    // override any values passed in by tests
+    if (initConfig) {
+      Object.keys(optimisticOracle).forEach((key) => {
+        if (initConfig[key]) {
+          optimisticOracle[key] = initConfig[key];
+        }
+      });
     }
 
     // return the initialization data in case tests did not override it and need access to it
