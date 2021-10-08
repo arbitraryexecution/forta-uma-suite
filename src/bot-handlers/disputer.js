@@ -65,8 +65,7 @@ function provideHandleBlock(data) {
     const financialContracts = await data.contracts;
     async function generateFindings(financialObject) {
       // grab things out of our financialObject
-      const { financialContractClient } = financialObject;
-      const { priceFeed } = financialObject;
+      const { financialContractClient, priceFeed } = financialObject;
       // update client and price feed
       await Promise.all([financialContractClient.update(), priceFeed.update()]);
 
@@ -92,8 +91,8 @@ function provideHandleBlock(data) {
               console.error('Could not get historical price');
             }
             if (!price) return null;
-            // price is available, use it to determine if the liquidation is disputable
 
+            // price is available, use it to determine if the liquidation is disputable
             const scaledPrice = price
               .mul(toBN(toWei('1')).add(toBN(toWei(defaultConfig.crThreshold.value.toString()))))
               .div(toBN(toWei('1')));
