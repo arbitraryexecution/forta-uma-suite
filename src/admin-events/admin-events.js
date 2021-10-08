@@ -90,6 +90,7 @@ function provideInitialize(data) {
       contracts.push(contract);
     }));
 
+    // eslint-disable-next-line no-param-reassign
     data.contracts = contracts;
   };
 }
@@ -97,7 +98,7 @@ function provideInitialize(data) {
 function provideHandleTransaction(data) {
   return async function handleTransaction(txEvent) {
     const { contracts } = data;
-    if (!contracts) throw new Error("handleTransaction called before initialization");
+    if (!contracts) throw new Error('handleTransaction called before initialization');
 
     const findings = [];
 
