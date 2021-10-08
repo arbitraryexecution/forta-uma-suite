@@ -31,13 +31,7 @@ const {
 
 const CHAIN_ID = 1; // mainnet
 
-// stores optimistic oracle contract address and interface
-// (set during initialization)
-const optimisticOracle = {
-  address: undefined,
-  abi: undefined,
-  iface: undefined,
-};
+const initializeData = {};
 
 logger.silent = true;
 
@@ -77,97 +71,92 @@ function calculatePercentError(first, second) {
   return delta.div(first).multipliedBy(100);
 }
 
-// creates a price feed using the UMA library
-async function createPriceFeed({ identifier, config }) {
-  // try to create a price feed
-  // this typically fails if the target asset requires a specific API key,
-  // or the lookback value has not been set
-  let priceFeed = await createReferencePriceFeedForFinancialContract(
-    logger,
-    web3,
-    new Networker(),
-    getTime,
-    undefined, // no address needed since we're passing identifier explicitly
-    config,
-    identifier,
-  ).catch();
-
-  // if the first attempt failed, set a lookback value and try again
-  if (!priceFeed) {
-    priceFeed = await createReferencePriceFeedForFinancialContract(
-      logger,
-      web3,
-      new Networker(),
-      getTime,
-      undefined, // no address needed since we're passing identifier explicitly
-      { lookback: 0, ...config },
-      identifier,
-    ).catch();
-  }
-
-  if (!priceFeed) {
-    throw new Error(`Unable to create price feed for identifier '${identifier}'`);
-  }
-
-  return priceFeed;
-}
-
-// get the price of an asset based on the UMA identifier string
-//
-// example identifiers: "BTC-BASIS-3M/USDC", "STABLESPREAD/USDC_18DEC"
-// this identifier will be used as a lookup in DefaultPriceFeedConfigs.ts in the UMA lib
-async function getPrice(identifier) {
-  // if the user has not set a specific API key in the admin-events.json file, set it to undefined
-  // many assets prices can be obtained using cryptowatch w/o any API key at all (rate limited)
-  const args = {
-    identifier,
-    config: {
-      cryptowatchApiKey: CRYPTOWATCH_API_KEY || undefined,
-      defipulseApiKey: DEFIPULSE_API_KEY || undefined,
-      tradermadeApiKey: TRADERMADE_API_KEY || undefined,
-      cmcApiKey: CMC_API_KEY || undefined,
-    },
-  };
-
-  // attempt to obtain a UMA price feed object
-  const priceFeed = await createPriceFeed(args);
-
-  // make an external request to get the price value
-  await priceFeed.update();
-  const price = (await priceFeed.getCurrentPrice()).toString();
-
-  return price;
-}
-
 // initialize() performs one-time configuration at startup
-// provideInitialize() allows tests to override the configuration data
-function provideInitialize(initConfig) {
+// provideInitialize() returns initialize which will update a specified object
+function provideInitialize(data) {
   return async function initialize() {
-    // get the Optimistic Oracle contract address for mainnet
-    // the address returned by the promise will be lowercase
-    optimisticOracle.address = await getAddress('OptimisticOracle', CHAIN_ID);
+    // creates a price feed using the UMA library
+    async function createPriceFeed({ identifier, config }) {
+      // try to create a price feed
+      // this typically fails if the target asset requires a specific API key,
+      // or the lookback value has not been set
+      let priceFeed = await createReferencePriceFeedForFinancialContract(
+        logger,
+        web3,
+        new Networker(),
+        getTime,
+        undefined, // no address needed since we're passing identifier explicitly
+        config,
+        identifier,
+      ).catch();
 
-    // create ethers interface object
-    optimisticOracle.abi = getAbi('OptimisticOracle');
-    optimisticOracle.iface = new ethers.utils.Interface(optimisticOracle.abi);
+      // if the first attempt failed, set a lookback value and try again
+      if (!priceFeed) {
+        priceFeed = await createReferencePriceFeedForFinancialContract(
+          logger,
+          web3,
+          new Networker(),
+          getTime,
+          undefined, // no address needed since we're passing identifier explicitly
+          { lookback: 0, ...config },
+          identifier,
+        ).catch();
+      }
 
-    // override any values passed in by tests
-    if (initConfig) {
-      Object.keys(optimisticOracle).forEach((key) => {
-        if (initConfig[key]) {
-          optimisticOracle[key] = initConfig[key];
-        }
-      });
+      if (!priceFeed) {
+        throw new Error(`Unable to create price feed for identifier '${identifier}'`);
+      }
+
+      return priceFeed;
     }
 
-    // return the initialization data in case tests did not override it and need access to it
-    return optimisticOracle;
+    // get the price of an asset based on the UMA identifier string
+    //
+    // example identifiers: "BTC-BASIS-3M/USDC", "STABLESPREAD/USDC_18DEC"
+    // this identifier will be used as a lookup in DefaultPriceFeedConfigs.ts in the UMA lib
+    async function getPrice(identifier) {
+      // if the user has not set a specific API key in the admin-events.json file, set it to undefined
+      // many assets prices can be obtained using cryptowatch w/o any API key at all (rate limited)
+      const args = {
+        identifier,
+        config: {
+          cryptowatchApiKey: CRYPTOWATCH_API_KEY || undefined,
+          defipulseApiKey: DEFIPULSE_API_KEY || undefined,
+          tradermadeApiKey: TRADERMADE_API_KEY || undefined,
+          cmcApiKey: CMC_API_KEY || undefined,
+        },
+      };
+
+      // attempt to obtain a UMA price feed object
+      const priceFeed = await createPriceFeed(args);
+
+      // make an external request to get the price value
+      await priceFeed.update();
+      const price = (await priceFeed.getCurrentPrice()).toString();
+
+      return price;
+    }
+
+    const optimisticOracle = {
+      // get the Optimistic Oracle contract address for mainnet
+      // the address returned by the promise will be lowercase
+      address: await getAddress('OptimisticOracle', CHAIN_ID),
+      // create ethers interface object
+      abi: getAbi('OptimisticOracle'),
+    }
+    // create and add the interface
+    optimisticOracle.iface = new ethers.utils.Interface(optimisticOracle.abi);
+
+    data.optimisticOracle = optimisticOracle;
+    data.createPriceFeed = createPriceFeed;
+    data.getPrice = getPrice; 
   };
 }
 
-// provideHandleTransaction() allows tests to supply their own mock getPrice function
-function provideHandleTransaction(getPriceFunc = getPrice) {
+function provideHandleTransaction(data) {
   return async function handleTransaction(txEvent) {
+    const { optimisticOracle, getPrice } = data;
+
     const findings = [];
 
     // filter only logs that match the optimistic oracle address
@@ -196,7 +185,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
         // lookup the price
         let price;
         try {
-          price = await getPriceFunc(idString);
+          price = await getPrice(idString);
         } catch (err) {
           console.error(err);
           continue;
@@ -230,7 +219,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
         // lookup the price
         let price;
         try {
-          price = await getPriceFunc(idString);
+          price = await getPrice(idString);
         } catch (err) {
           console.error(err);
           continue;
@@ -278,8 +267,7 @@ function provideHandleTransaction(getPriceFunc = getPrice) {
 
 module.exports = {
   provideInitialize,
-  initalize: provideInitialize(),
+  initialize: provideInitialize(initializeData),
   provideHandleTransaction,
-  handleTransaction: provideHandleTransaction(),
-  createPriceFeed,
+  handleTransaction: provideHandleTransaction(initializeData),
 };
