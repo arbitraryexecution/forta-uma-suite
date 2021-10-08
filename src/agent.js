@@ -4,7 +4,7 @@ const deployerWatch = require('./deployer-watch/deployer-watch');
 const monitorMintCalls = require('./monitor-mint-calls/monitor-mint-calls');
 
 // block handlers
-// <empty>
+const liquidator = require('./bot-handlers/liquidator');
 
 const txHandlers = [
   adminEvents,
@@ -13,6 +13,7 @@ const txHandlers = [
 ];
 
 const blockHandlers = [
+  liquidator,
 ];
 
 // returns findings over all txHandler's handleTransaction functions
