@@ -2,6 +2,7 @@
 const adminEvents = require('./admin-events/admin-events');
 const deployerWatch = require('./deployer-watch/deployer-watch');
 const monitorMintCalls = require('./monitor-mint-calls/monitor-mint-calls');
+const optimisticOracle = require('./optimistic-oracle/optimistic-oracle');
 
 // block handlers
 const liquidator = require('./bot-handlers/liquidator');
@@ -11,6 +12,7 @@ const txHandlers = [
   adminEvents,
   deployerWatch,
   monitorMintCalls,
+  optimisticOracle,
 ];
 
 const blockHandlers = [

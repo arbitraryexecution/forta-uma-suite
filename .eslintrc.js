@@ -21,7 +21,7 @@ module.exports = {
       rules: {
         'no-plusplus': 'off',
         'no-continue': 'off',
-        'import/no-extraneous-dependencies': ["error", {"devDependencies": true}],
+        'import/no-extraneous-dependencies': ['error', { devDependencies: true }],
       },
     },
   ],
