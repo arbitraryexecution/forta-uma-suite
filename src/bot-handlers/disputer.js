@@ -1,33 +1,32 @@
+/* eslint-disable no-underscore-dangle */
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
 const web3 = require('web3');
 const contractData = require('./disputer-contract-data.json');
+
 const {
   umaEverestId,
 } = require('../../agent-config.json');
-
 const {
   initializeContracts,
 } = require('./initialization');
 
 // web3 helpers
-const {
-  toWei,
-  toBN,
-} = web3.utils;
+const { toWei, toBN } = web3.utils;
 
-function createAlert(price, scaledPrice, liquidation) {
+function createAlert(financialContract, price, scaledPrice, liquidation) {
   return Finding.fromObject({
-    name: 'Dispute Opportunity',
-    description: 'Dispute opportunity identified',
+    name: 'UMA Dispute Opportunity',
+    description: `Dispute opportunity identified for contract ${financialContract._address}`,
     alertId: 'AE-UMA-DISPUTE',
     protocol: 'uma',
     severity: FindingSeverity.Medium,
-    type: FindingType.Suspicious, // TODO: Change to info when we update forta-agent
+    type: FindingType.Info,
     everestId: umaEverestId,
     metadata: {
+      financialContract: financialContract._address,
       price: price.toString(),
       scaledPrice: scaledPrice.toString(),
-      liquidation,
+      liquidation: JSON.stringify(liquidation),
     },
   });
 }
@@ -78,7 +77,7 @@ function provideHandleBlock(contracts) {
             const historicalLookbackWindow = priceFeed.getLastUpdateTime() - lookback;
 
             if (liquidationTime < historicalLookbackWindow) {
-              // console.error('Liquidation time before earliest price feed historical timestamp');
+              // Liquidation time before earliest price feed historical timestamp
               return null;
             }
             // get the historic price at the liquidation time.
@@ -86,7 +85,7 @@ function provideHandleBlock(contracts) {
             try {
               price = await priceFeed.getHistoricalPrice(liquidationTime);
             } catch (error) {
-              // console.error('could not get historical price');
+              console.error('Could not get historical price');
             }
             if (!price) return null;
             // price is available, use it to determine if the liquidation is disputable
@@ -102,7 +101,8 @@ function provideHandleBlock(contracts) {
               && financialContractClient.getLastUpdateTime() >= timeAndDelay
             ) {
               // here is where the finding should be
-              findings.push(createAlert(price, scaledPrice, liquidation));
+              findings.push(createAlert(financialContractClient.financialContract,
+                price, scaledPrice, liquidation));
             }
             return null;
           }),

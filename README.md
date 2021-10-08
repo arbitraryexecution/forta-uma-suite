@@ -38,7 +38,7 @@ the following handlers:
 - AE-UMA-DISPUTE
   - Fired when a liquidation can be disputed
   - Severity is always "medium"
-  - Type is always set to "suspicious"
+  - Type is always set to "info"
   - Metadata field contains position price, scaled price, and liquidation data
 
 ## Test Data

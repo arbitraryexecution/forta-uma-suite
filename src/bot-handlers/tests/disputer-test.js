@@ -1,4 +1,7 @@
 /* eslint-disable no-loop-func, max-len */
+// Bulk of initialization code taken from UMA source file
+// UMAprotocol/protocol/packages/disputer/test/Disputer.js
+//
 const { web3, getContract } = require('hardhat');
 
 const {
@@ -420,9 +423,8 @@ describe('disputer-test.js', () => {
             const scaledPrice = price
               .mul(toBN(toWei('1')).add(toBN(toWei(crThreshold.toString()))))
               .div(toBN(toWei('1')));
-            testFindings.push(createAlert(price, scaledPrice, liquidations[1])); // sponsor 2
-            testFindings.push(createAlert(price, scaledPrice, liquidations[2])); // sponsor 3
-
+            testFindings.push(createAlert(financialContractClient.financialContract, price, scaledPrice, liquidations[1])); // sponsor 2
+            testFindings.push(createAlert(financialContractClient.financialContract, price, scaledPrice, liquidations[2])); // sponsor 3
             assert.deepEqual(await handleBlock(), testFindings);
           },
         );
@@ -515,8 +517,8 @@ describe('disputer-test.js', () => {
           const scaledPrice = price
             .mul(toBN(toWei('1')).add(toBN(toWei(crThreshold.toString()))))
             .div(toBN(toWei('1')));
-          testFindings.push(createAlert(price, scaledPrice, liquidations[0])); // sponsor 1
-          testFindings.push(createAlert(price, scaledPrice, liquidations[1])); // sponsor 2
+          testFindings.push(createAlert(financialContractClient.financialContract, price, scaledPrice, liquidations[0])); // sponsor 1
+          testFindings.push(createAlert(financialContractClient.financialContract, price, scaledPrice, liquidations[1])); // sponsor 2
 
           assert.deepEqual(await handleBlock(), testFindings);
         });
