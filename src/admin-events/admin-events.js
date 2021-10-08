@@ -7,7 +7,7 @@ const { umaEverestId } = require('../../agent-config.json');
 const adminEvents = require('./admin-events.json');
 
 // Stores information about each contract
-const contracts = [];
+const initializeData = {};
 
 // returns the list of events for a given contract
 function getEvents(contractName) {
@@ -39,8 +39,8 @@ function filterAndParseLogs(logs, address, iface, eventNames) {
 // Converts all values to strings so that BigNumbers are readable
 function extractArgs(args) {
   const strippedArgs = Object();
-  Object.keys(args).forEach((k) => {
-    if (Number.isNaN(Number(k))) { strippedArgs[k] = args[k].toString(); }
+  Object.keys(args).forEach((key) => {
+    if (Number.isNaN(Number(key))) strippedArgs[key] = args[key].toString();
   });
   return strippedArgs;
 }
@@ -65,62 +65,73 @@ function createAlert(eventName, contractName, contractAddress, eventType, eventS
   });
 }
 
-// Populates the contracts array
-async function initialize() {
-  // Constant for getAddress
-  const CHAIN_ID = 1;
+// Initializes data required for handler
+function provideInitialize(data) {
+  return async function initialize() {
+    const contracts = [];
 
-  // Clear the contracts array
-  contracts.length = 0;
+    // Constant for getAddress
+    const CHAIN_ID = 1;
 
-  // Get the contract names that have events we wish to monitor
-  const contractNames = Object.keys(adminEvents);
+    // Get the contract names that have events we wish to monitor
+    const contractNames = Object.keys(adminEvents);
 
-  // Get and store the information about each contract
-  await Promise.all(contractNames.map(async (name) => {
-    const abi = getAbi(name);
-    const iface = new ethers.utils.Interface(abi);
-    const address = (await getAddress(name, CHAIN_ID)).toLowerCase();
+    // Get and store the information about each contract
+    await Promise.all(contractNames.map(async (name) => {
+      const abi = getAbi(name);
+      const iface = new ethers.utils.Interface(abi);
+      const address = (await getAddress(name, CHAIN_ID)).toLowerCase();
 
-    const contract = {
-      name,
-      address,
-      iface,
-    };
-    contracts.push(contract);
-  }));
+      const contract = {
+        name,
+        address,
+        iface,
+      };
+      contracts.push(contract);
+    }));
+
+    // eslint-disable-next-line no-param-reassign
+    data.contracts = contracts;
+  };
 }
 
-function handleTransaction(txEvent) {
-  const findings = [];
+function provideHandleTransaction(data) {
+  return async function handleTransaction(txEvent) {
+    const { contracts } = data;
+    if (!contracts) throw new Error('handleTransaction called before initialization');
 
-  // iterate over each contract name to get the address and events
-  contracts.forEach((contract) => {
-    // for each contract lookup the event events
-    const events = getEvents(contract.name);
-    const eventNames = Object.keys(events);
+    const findings = [];
 
-    // Filter down to only the events we want to alert on
-    const parsedLogs = filterAndParseLogs(txEvent.logs,
-      contract.address,
-      contract.iface,
-      eventNames);
+    // iterate over each contract name to get the address and events
+    contracts.forEach((contract) => {
+      // for each contract lookup the event events
+      const events = getEvents(contract.name);
+      const eventNames = Object.keys(events);
 
-    // Alert on each item in parsedLogs
-    parsedLogs.forEach((parsedLog) => {
-      findings.push(createAlert(parsedLog.name,
-        contract.name,
+      // Filter down to only the events we want to alert on
+      const parsedLogs = filterAndParseLogs(txEvent.logs,
         contract.address,
-        events[parsedLog.name].type,
-        events[parsedLog.name].severity,
-        parsedLog.args));
-    });
-  });
+        contract.iface,
+        eventNames);
 
-  return findings;
+      // Alert on each item in parsedLogs
+      parsedLogs.forEach((parsedLog) => {
+        findings.push(createAlert(parsedLog.name,
+          contract.name,
+          contract.address,
+          events[parsedLog.name].type,
+          events[parsedLog.name].severity,
+          parsedLog.args));
+      });
+    });
+
+    return findings;
+  };
 }
 
 module.exports = {
-  handleTransaction,
-  initialize,
+  provideHandleTransaction,
+  handleTransaction: provideHandleTransaction(initializeData),
+  provideInitialize,
+  initialize: provideInitialize(initializeData),
 };
