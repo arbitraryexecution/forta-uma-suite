@@ -9,11 +9,11 @@ const votingAddressPromise = getAddress('Voting', CHAIN_ID);
 
 // Tests
 describe('admin event monitoring', () => {
-  // Initialize the Handler
-  initialize();
-
   describe('handleTransaction', () => {
     it('returns empty findings if contract address does not match', async () => {
+     // Initialize the Handler
+     await initialize();
+
       // logs data for test case:  no address match + no topic match
       const logsNoMatchAddress = [
         {
@@ -38,6 +38,9 @@ describe('admin event monitoring', () => {
     });
 
     it('returns empty findings if contract address matches but not event', async () => {
+      // Initialize the Handler
+      await initialize();
+
       const votingContract = (await votingAddressPromise).toLowerCase();
 
       // Logs data for test case: address match + no topic match
@@ -69,6 +72,9 @@ describe('admin event monitoring', () => {
     });
 
     it('returns a finding if a target contract emits an event from its watchlist', async () => {
+      // Initialize the Handler
+      await initialize();
+
       const votingContract = (await votingAddressPromise).toLowerCase();
       const eventName = 'VoteCommitted';
       const contractName = 'Voting';

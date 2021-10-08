@@ -70,6 +70,9 @@ async function initialize() {
   // Constant for getAddress
   const CHAIN_ID = 1;
 
+  // Clear the contracts array
+  contracts.length = 0;
+
   // Get the contract names that have events we wish to monitor
   const contractNames = Object.keys(adminEvents);
 
