@@ -177,10 +177,7 @@ function provideHandleTransaction(data) {
     const parsedLogs = oracleLogs.map(parse).filter(filter);
 
     // process the target events
-
-    /* eslint-disable no-await-in-loop */
-    for (let i = 0; i < parsedLogs.length; i++) {
-      const log = parsedLogs[i];
+    await Promise.all(parsedLogs.map(async (log) => {
       if (log.name === 'RequestPrice') {
         const { identifier, requester } = log.args;
 
@@ -193,7 +190,7 @@ function provideHandleTransaction(data) {
           price = await getPriceFunc(idString);
         } catch (err) {
           console.error(err);
-          continue;
+          return;
         }
 
         // report the price obtained as a finding
@@ -227,7 +224,7 @@ function provideHandleTransaction(data) {
           price = await getPriceFunc(idString);
         } catch (err) {
           console.error(err);
-          continue;
+          return;
         }
 
         const proposedPrice = new BigNumber(proposedPriceRaw.toString());
@@ -264,7 +261,7 @@ function provideHandleTransaction(data) {
           },
         }));
       }
-    }
+    }));
 
     return findings;
   };
