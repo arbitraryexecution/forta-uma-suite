@@ -137,26 +137,30 @@ async function getPrice(identifier) {
 // provideInitialize() returns initialize which will update a specified object
 function provideInitialize(data) {
   return async function initialize() {
-
     const optimisticOracle = {
       // get the Optimistic Oracle contract address for mainnet
       // the address returned by the promise will be lowercase
       address: await getAddress('OptimisticOracle', CHAIN_ID),
       // create ethers interface object
       abi: getAbi('OptimisticOracle'),
-    }
+    };
     // create and add the interface
     optimisticOracle.iface = new ethers.utils.Interface(optimisticOracle.abi);
 
+    /* eslint-disable no-param-reassign */
     data.optimisticOracle = optimisticOracle;
     data.createPriceFeed = createPriceFeed;
-    data.getPrice = getPrice; 
+    data.getPrice = getPrice;
+    /* eslint-enable no-param-reassign */
   };
 }
 
 function provideHandleTransaction(data) {
   return async function handleTransaction(txEvent) {
-    const { optimisticOracle, getPrice:getPriceFunc } = data;
+    const { optimisticOracle, getPrice: getPriceFunc } = data;
+    if (!optimisticOracle || !getPrice) {
+      throw new Error('handleTransaction was called before initialization');
+    }
 
     const findings = [];
 

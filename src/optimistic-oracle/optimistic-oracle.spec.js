@@ -50,9 +50,9 @@ async function mockGetPriceBadResponse(identifier) {
 }
 
 describe('UMA optimistic oracle validation agent', () => {
-  let handleTransaction
+  let handleTransaction;
   let initializeData;
-  let optimisticOracle
+  let optimisticOracle;
 
   beforeEach(async () => {
     // invoke the handler's initialize function and get the optimistic oracle address and iface
