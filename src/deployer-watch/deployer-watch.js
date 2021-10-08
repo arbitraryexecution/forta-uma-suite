@@ -1,7 +1,7 @@
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
 
-const addresses = require('./config/deployer-watch.json');
-const config = require('../agent-config.json');
+const addresses = require('./deployer-watch.json');
+const config = require('../../agent-config.json');
 
 const deployerAddress = addresses.Deployer.toLowerCase();
 const whitelist = {};
@@ -24,8 +24,11 @@ const handleTransaction = async (txEvent) => {
     return findings;
   }
 
+  // low severity alert if the Deployer was involved
+  // txEvent.addresses includes txEvent.to and txEvent.from
+  // uses txEvent.addresses instead of explicitly checking against txEvent.to and txEvent.from
+  // to also catch scenarios where Deployer is involved but is not the initiator
   if (txAddresses[deployerAddress]) {
-    // low severity alert if the Deployer was involved
     findings.push(
       Finding.fromObject({
         name: 'UMA Deployer Watch',
@@ -34,6 +37,7 @@ const handleTransaction = async (txEvent) => {
         severity: FindingSeverity.Low,
         type: FindingType.Unknown,
         everestId: config.umaEverestId,
+        protocol: 'uma',
         metadata: {
           to,
           from,
@@ -51,6 +55,7 @@ const handleTransaction = async (txEvent) => {
           severity: FindingSeverity.High,
           type: FindingType.Suspicious,
           everestId: config.umaEverestId,
+          protocol: 'uma',
           metadata: {
             to,
             from,

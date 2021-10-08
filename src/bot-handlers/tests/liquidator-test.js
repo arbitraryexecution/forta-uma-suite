@@ -1,21 +1,17 @@
 /* eslint-disable no-loop-func, max-len */
-// Bulk of initialization code taken from UMA source file
-// UMAprotocol/protocol/packages/disputer/test/Disputer.js
-//
+// most of this code is taken from UMA's repository
+// protocol/packages/liquidator/test/Liquidator.js
 const { web3, getContract } = require('hardhat');
 
 const {
-  toWei, utf8ToHex, padRight, toBN,
+  toWei, utf8ToHex, padRight,
 } = web3.utils;
-
 const winston = require('winston');
 const sinon = require('sinon');
 const {
   parseFixed,
-  LiquidationStatesEnum,
   interfaceName,
   runTestForVersion,
-  MAX_UINT_VAL,
   createConstructorParamsForContractVersion,
   getContractsNodePackageAliasForVerion,
   TESTED_CONTRACT_VERSIONS,
@@ -24,7 +20,7 @@ const {
 
 const { assert } = require('chai');
 
-// helper clients and custom winston transport module to monitor winston log outputs
+// Helper clients and custom winston transport module to monitor winston log outputs
 const {
   FinancialContractClient,
   PriceFeedMock,
@@ -35,14 +31,12 @@ const {
 const {
   provideHandleBlock,
   createAlert,
-} = require('../disputer');
+} = require('../liquidator');
 
 let iterationTestVersion; // store the test version between tests that is currently being tested.
 const startTime = '15798990420';
-const unreachableDeadline = MAX_UINT_VAL;
-const crThreshold = 0.02;
 
-// common contract objects.
+// Common contract objects.
 let store;
 let optimisticOracle;
 let finder;
@@ -58,7 +52,7 @@ let timer;
 let fundingRateIdentifier;
 let multicall;
 
-// JS Objects, clients and helpers
+// js Objects, clients and helpers
 let identifier;
 let spy;
 let spyLogger;
@@ -66,9 +60,19 @@ let financialContractClient;
 let handleBlock;
 let convertDecimals;
 
+// Set the funding rate and advances time by 10k seconds.
+const setFundingRateAndAdvanceTime = async (fundingRate, from) => {
+  const currentTime = Number(await financialContract.methods.getCurrentTime().call());
+
+  await financialContract.methods.proposeFundingRate(
+    { rawValue: fundingRate }, currentTime,
+  ).send({ from });
+  await financialContract.methods.setCurrentTime(currentTime + 10000).send({ from });
+};
+
 // If the current version being executed is part of the `supportedVersions` array then return `it` to run the test.
 // Else, do nothing. Can be used exactly in place of a normal `it` to parameterize contract types and versions supported.
-// For a given test.eg: versionedIt([{ contractType: "Perpetual", contractVersion: "latest" }])("test name", async function () { assert.isTrue(true) })
+// for a given test.eg: versionedIt([{ contractType: "Perpetual", contractVersion: "latest" }])("test name", async function () { assert.isTrue(true) })
 // Note that a second param can be provided to make the test an `it.only` thereby ONLY running that single test, on
 // the provided version. This is very useful for debugging and writing single unit tests without having ro run all tests.
 function versionedIt(supportedVersions, shouldBeItOnly = false) {
@@ -83,17 +87,16 @@ function versionedIt(supportedVersions, shouldBeItOnly = false) {
 // allows this to be set to null without throwing.
 const Convert = (decimals) => (number) => (number ? parseFixed(number.toString(), decimals).toString() : number);
 
-describe('disputer-test.js', () => {
+describe('liquidator-test.js', () => {
   let accounts;
   // Roles
   let sponsor1;
   let sponsor2;
   let sponsor3;
-  let liquidator;
   let contractCreator;
 
   TESTED_CONTRACT_VERSIONS.forEach((contractVersion) => {
-    // store the contractVersion.contractVersion, type and version being tested
+    // Store the contractVersion.contractVersion, type and version being tested
     iterationTestVersion = contractVersion;
 
     // eslint-disable-next-line import/no-dynamic-require, global-require
@@ -105,8 +108,8 @@ describe('disputer-test.js', () => {
       return getContract(name, { abi, bytecode });
     };
 
-    // import the tested versions of contracts. note that financialContract is either an ExpiringMultiParty or a
-    // perpetual depending on the current iteration version.
+    // Import the tested versions of contracts. Note that financialContract is either an ExpiringMultiParty or a
+    // Perpetual depending on the current iteration version.
     const FinancialContract = createContract(contractVersion.contractType);
     const Finder = createContract('Finder');
     const IdentifierWhitelist = createContract('IdentifierWhitelist');
@@ -124,7 +127,7 @@ describe('disputer-test.js', () => {
       describe(`${testConfig.collateralDecimals} collateral, ${testConfig.syntheticDecimals} synthetic & ${testConfig.priceFeedDecimals} pricefeed decimals, for smart contract version ${contractVersion.contractType} @ ${contractVersion.contractVersion}`, () => {
         before(async () => {
           accounts = await web3.eth.getAccounts();
-          [sponsor1, sponsor2, sponsor3, liquidator, contractCreator] = accounts;
+          [sponsor1, sponsor2, sponsor3, contractCreator] = accounts;
 
           identifier = `${testConfig.tokenName}TEST`;
           fundingRateIdentifier = `${testConfig.tokenName}_FUNDING`;
@@ -136,13 +139,12 @@ describe('disputer-test.js', () => {
           ).send({ from: contractCreator });
           await collateralToken.methods.addMember(1, contractCreator).send({ from: contractCreator });
 
-          // seed the sponsors accounts.
+          // Seed the sponsors accounts.
           await collateralToken.methods.mint(sponsor1, convertDecimals('100000')).send({ from: contractCreator });
           await collateralToken.methods.mint(sponsor2, convertDecimals('100000')).send({ from: contractCreator });
           await collateralToken.methods.mint(sponsor3, convertDecimals('100000')).send({ from: contractCreator });
-          await collateralToken.methods.mint(liquidator, convertDecimals('100000')).send({ from: contractCreator });
 
-          // create identifier whitelist and register the price tracking ticker with it.
+          // Create identifier whitelist and register the price tracking ticker with it.
           identifierWhitelist = await IdentifierWhitelist.new().send({ from: contractCreator });
           await identifierWhitelist.methods
             .addSupportedIdentifier(utf8ToHex(identifier))
@@ -187,14 +189,14 @@ describe('disputer-test.js', () => {
             .changeImplementationAddress(utf8ToHex(interfaceName.Oracle), mockOracle.options.address)
             .send({ from: contractCreator });
 
-          // create a new synthetic token
+          // Create a new synthetic token
           syntheticToken = await SyntheticToken.new(
             'Test Synthetic Token',
             'SYNTH',
             testConfig.syntheticDecimals,
           ).send({ from: contractCreator });
 
-          // if we are testing a perpetual then we need to also deploy a config store, an optimistic oracle and set the funding rate identifier.
+          // If we are testing a perpetual then we need to also deploy a config store, an optimistic oracle and set the funding rate identifier.
           if (contractVersion.contractType === 'Perpetual') {
             configStore = await ConfigStore.new(
               {
@@ -229,27 +231,22 @@ describe('disputer-test.js', () => {
             timer,
             store,
             configStore: configStore || {}, // if the contract type is not a perp this will be null.
-          },
-          // these tests assume a minimum sponsor size of 1, not 5 as default
-          { minSponsorTokens: { rawValue: convertDecimals('1') } });
+          });
 
-          // deploy a new expiring multi party OR perpetual, depending on the test version.
+          // Deploy a new expiring multi party OR perpetual, depending on the test version.
           financialContract = await FinancialContract.new(constructorParams).send({ from: contractCreator });
           await syntheticToken.methods.addMinter(financialContract.options.address).send({ from: contractCreator });
           await syntheticToken.methods.addBurner(financialContract.options.address).send({ from: contractCreator });
 
           await collateralToken.methods
-            .approve(financialContract.options.address, convertDecimals('100000000'))
+            .approve(financialContract.options.address, convertDecimals('10000000'))
             .send({ from: sponsor1 });
           await collateralToken.methods
-            .approve(financialContract.options.address, convertDecimals('100000000'))
+            .approve(financialContract.options.address, convertDecimals('10000000'))
             .send({ from: sponsor2 });
           await collateralToken.methods
-            .approve(financialContract.options.address, convertDecimals('100000000'))
+            .approve(financialContract.options.address, convertDecimals('10000000'))
             .send({ from: sponsor3 });
-          await collateralToken.methods
-            .approve(financialContract.options.address, convertDecimals('100000000'))
-            .send({ from: liquidator });
 
           syntheticToken = await Token.at(await financialContract.methods.tokenCurrency().call());
           await syntheticToken.methods
@@ -261,11 +258,8 @@ describe('disputer-test.js', () => {
           await syntheticToken.methods
             .approve(financialContract.options.address, convertDecimals('100000000'))
             .send({ from: sponsor3 });
-          await syntheticToken.methods
-            .approve(financialContract.options.address, convertDecimals('100000000'))
-            .send({ from: liquidator });
 
-          // if we are testing a perpetual then we need to apply the initial funding rate to start the timer.
+          // If we are testing a perpetual then we need to apply the initial funding rate to start the timer.
           await financialContract.methods.setCurrentTime(startTime).send({ from: contractCreator });
 
           spy = sinon.spy();
@@ -275,7 +269,7 @@ describe('disputer-test.js', () => {
             transports: [new SpyTransport({ level: 'info' }, { spy })],
           });
 
-          // create a new instance of the FinancialContractClient
+          // Create a new instance of the FinancialContractClient
           financialContractClient = new FinancialContractClient(
             spyLogger,
             FinancialContract.abi,
@@ -288,7 +282,7 @@ describe('disputer-test.js', () => {
             contractVersion.contractType,
           );
 
-          // create a new instance of the price feed mock.
+          // Create a new instance of the price feed mock.
           priceFeedMock = new PriceFeedMock(undefined, undefined, undefined, testConfig.priceFeedDecimals);
 
           // initialize handler
@@ -301,7 +295,7 @@ describe('disputer-test.js', () => {
         });
 
         versionedIt([{ contractType: 'any', contractVersion: 'any' }])(
-          'Detect disputable positions',
+          'Can correctly detect undercollateralized positions',
           async () => {
             // sponsor1 creates a position with 125 units of collateral, creating 100 synthetic tokens.
             await financialContract.methods
@@ -318,211 +312,188 @@ describe('disputer-test.js', () => {
               .create({ rawValue: convertDecimals('175') }, { rawValue: convertDecimals('100') })
               .send({ from: sponsor3 });
 
-            // the liquidator creates a position to have synthetic tokens.
-            await financialContract.methods
-              .create({ rawValue: convertDecimals('1000') }, { rawValue: convertDecimals('500') })
-              .send({ from: liquidator });
-
-            // submit the liquidations
-            await financialContract.methods
-              .createLiquidation(
-                sponsor1,
-                { rawValue: '0' },
-                { rawValue: toWei('1.75') },
-                { rawValue: convertDecimals('100') },
-                unreachableDeadline,
-              )
-              .send({ from: liquidator });
-            await financialContract.methods
-              .createLiquidation(
-                sponsor2,
-                { rawValue: '0' },
-                { rawValue: toWei('1.75') },
-                { rawValue: convertDecimals('100') },
-                unreachableDeadline,
-              )
-              .send({ from: liquidator });
-            await financialContract.methods
-              .createLiquidation(
-                sponsor3,
-                { rawValue: '0' },
-                { rawValue: toWei('1.75') },
-                { rawValue: convertDecimals('100') },
-                unreachableDeadline,
-              )
-              .send({ from: liquidator });
-
-            // try disputing before any mocked prices are set, simulating a situation where the pricefeed
-            // fails to return a price.
-            await financialContractClient.update();
-            const earliestLiquidationTime = Number(
-              financialContractClient.getUndisputedLiquidations()[0].liquidationTime,
+            // All three token sponsors should still have their positions with full collateral.
+            assert.equal(
+              (await financialContract.methods.getCollateral(sponsor1).call()).rawValue,
+              convertDecimals('125'),
             );
-            priceFeedMock.setLastUpdateTime(earliestLiquidationTime);
+            assert.equal(
+              (await financialContract.methods.getCollateral(sponsor2).call()).rawValue,
+              convertDecimals('150'),
+            );
+            assert.equal(
+              (await financialContract.methods.getCollateral(sponsor3).call()).rawValue,
+              convertDecimals('175'),
+            );
 
-            await priceFeedMock.update();
+            // Start with a mocked price of 1 usd per token.
+            // This puts both sponsors over collateralized so no liquidations should occur.
+            priceFeedMock.setCurrentPrice(toWei('1'));
 
-            // no disputes yet
+            // Run the handler, expect no liquidations available
             assert.deepEqual(await handleBlock(), []);
 
-            // start with a mocked price of 1.75 usd per token.
-            // this makes all sponsors undercollateralized, meaning no disputes are issued.
-            priceFeedMock.setHistoricalPrice(toWei('1.75'));
+            // Next, assume the price feed has moved such that two of the three sponsors
+            // are now undercollateralized.
+            // A price of 1.3 USD per token puts sponsor1 and sponsor2 at undercollateralized while sponsor3 remains
+            // collateralized. Numerically debt * price * coltReq > debt for collateralized position.
+            // Sponsor1: 100 * 1.3 * 1.2 > 125 [undercollateralized]
+            // Sponsor2: 100 * 1.3 * 1.2 > 150 [undercollateralized]
+            // Sponsor3: 100 * 1.3 * 1.2 < 175 [sufficiently collateralized]
 
-            await priceFeedMock.update();
-            assert.deepEqual(await handleBlock(), []);
+            priceFeedMock.setCurrentPrice(toWei('1.3'));
 
-            // there should be no liquidations created from any sponsor account
-            assert.equal(
-              (await financialContract.methods.getLiquidations(sponsor1).call())[0].state,
-              LiquidationStatesEnum.PRE_DISPUTE,
-            );
-            assert.equal(
-              (await financialContract.methods.getLiquidations(sponsor2).call())[0].state,
-              LiquidationStatesEnum.PRE_DISPUTE,
-            );
-            assert.equal(
-              (await financialContract.methods.getLiquidations(sponsor3).call())[0].state,
-              LiquidationStatesEnum.PRE_DISPUTE,
-            );
+            // Run the handler, expect liquidation on the sponsor 1 and 2
+            const expectedAlerts = [];
+            financialContractClient.getAllPositions().filter(
+              // both sponsor 1 and sponsor 2 should be liquidatable
+              (position) => position.sponsor === sponsor1 || position.sponsor === sponsor2,
+            ).forEach((position) => {
+              expectedAlerts.push(createAlert(financialContractClient, position, toWei('1.3')));
+            });
 
-            // with a price of 1.1, two sponsors should be correctly collateralized, so disputes should be issued against sponsor2 and sponsor3's liquidations.
-            priceFeedMock.setHistoricalPrice(toWei('1.1'));
-            await financialContractClient.update();
-            await priceFeedMock.update();
-
-            // disputing a timestamp that is before the pricefeed's lookback window will do nothing and print no warnings:
-            // set earliest timestamp to AFTER the liquidation:
-            priceFeedMock.setLastUpdateTime(earliestLiquidationTime + 2);
-            priceFeedMock.setLookback(1);
-            await priceFeedMock.update();
-
-            // there should be no liquidations created from any sponsor account
-            assert.equal(
-              (await financialContract.methods.getLiquidations(sponsor1).call())[0].state,
-              LiquidationStatesEnum.PRE_DISPUTE,
-            );
-            assert.equal(
-              (await financialContract.methods.getLiquidations(sponsor2).call())[0].state,
-              LiquidationStatesEnum.PRE_DISPUTE,
-            );
-            assert.equal(
-              (await financialContract.methods.getLiquidations(sponsor3).call())[0].state,
-              LiquidationStatesEnum.PRE_DISPUTE,
-            );
-
-            assert.deepEqual(await handleBlock(), []);
-
-            // now, set lookback such that the liquidation timestamp is captured and the dispute should go through.
-            priceFeedMock.setLookback(2);
-            await priceFeedMock.update();
-
-            const testFindings = [];
-            const liquidations = financialContractClient.getUndisputedLiquidations();
-
-            // we skip sponsor1's liquidation, since it is not disputable
-            const price = toBN(toWei('1.1'));
-            const scaledPrice = price
-              .mul(toBN(toWei('1')).add(toBN(toWei(crThreshold.toString()))))
-              .div(toBN(toWei('1')));
-            testFindings.push(createAlert(financialContractClient.financialContract, price, scaledPrice, liquidations[1])); // sponsor 2
-            testFindings.push(createAlert(financialContractClient.financialContract, price, scaledPrice, liquidations[2])); // sponsor 3
-            assert.deepEqual(await handleBlock(), testFindings);
+            assert.deepEqual(await handleBlock(), expectedAlerts);
           },
         );
-
         versionedIt([{ contractType: 'any', contractVersion: 'any' }])(
-          "Don't get tricked by almost disputable withdraws",
+          'Can correctly detect invalid withdrawals',
           async () => {
             // sponsor1 creates a position with 125 units of collateral, creating 100 synthetic tokens.
             await financialContract.methods
               .create({ rawValue: convertDecimals('125') }, { rawValue: convertDecimals('100') })
               .send({ from: sponsor1 });
 
-            // the liquidator creates a position to have synthetic tokens.
+            // sponsor2 creates a position with 150 units of collateral, creating 100 synthetic tokens.
             await financialContract.methods
-              .create({ rawValue: convertDecimals('1000') }, { rawValue: convertDecimals('500') })
-              .send({ from: liquidator });
+              .create({ rawValue: convertDecimals('150') }, { rawValue: convertDecimals('100') })
+              .send({ from: sponsor2 });
 
-            // the sponsor1 submits a valid withdrawal request of withdrawing exactly 5e18 collateral. This places their
-            // position at collateral of 120 and debt of 100. At a price of 1 unit per token they are exactly collateralized.
+            // Both three token sponsors should still have their positions with full collateral.
+            assert.equal(
+              (await financialContract.methods.getCollateral(sponsor1).call()).rawValue,
+              convertDecimals('125'),
+            );
+            assert.equal(
+              (await financialContract.methods.getCollateral(sponsor2).call()).rawValue,
+              convertDecimals('150'),
+            );
 
-            await financialContract.methods
-              .requestWithdrawal({ rawValue: convertDecimals('5') })
-              .send({ from: sponsor1 });
+            // Start with a mocked price of 1 usd per token.
+            // This puts both sponsors over collateralized so no liquidations should occur.
+            priceFeedMock.setCurrentPrice(toWei('1'));
 
-            await financialContractClient.update();
-
-            await financialContract.methods
-              .createLiquidation(
-                sponsor1,
-                { rawValue: '0' },
-                { rawValue: toWei('1.75') }, // Price high enough to initiate the liquidation
-                { rawValue: convertDecimals('100') },
-                unreachableDeadline,
-              )
-              .send({ from: liquidator });
-            // with a price of 1 usd per token this withdrawal was actually valid, even though it's very close to liquidation.
-            // this makes all sponsors undercollateralized, meaning no disputes are issued.
-            priceFeedMock.setHistoricalPrice(toWei('1'));
-            await priceFeedMock.update();
-            await financialContractClient.update();
+            // ensure no findings are reported initially
             assert.deepEqual(await handleBlock(), []);
+
+            // If sponsor1 requests a withdrawal of any amount of collateral above 5 units at the given price of 1 usd per token
+            // their remaining position becomes undercollateralized. Say they request to withdraw 10 units of collateral.
+            // This places their position with a CR of: 115 / (100 * 1) * 100 = 115%. This is below the CR threshold.
+            await financialContract.methods
+              .requestWithdrawal({ rawValue: convertDecimals('10') })
+              .send({ from: sponsor1 });
+            await financialContractClient.update();
+
+            priceFeedMock.setCurrentPrice(toWei('1'));
+
+            // There should be exactly one liquidation in sponsor1's account. The liquidated collateral should be the original
+            // amount of collateral minus the collateral withdrawn. 125 - 10 = 115
+            const expectedAlerts = [];
+            financialContractClient.getAllPositions().filter(
+              // only sponsor1 should be liquidatable
+              (position) => position.sponsor === sponsor1,
+            ).forEach((position) => {
+              expectedAlerts.push(createAlert(financialContractClient, position, toWei('1')));
+            });
+
+            assert.deepEqual(await handleBlock(), expectedAlerts);
           },
         );
 
-        versionedIt([{ contractType: 'any', contractVersion: 'any' }])('Too little collateral', async () => {
-          // sponsor1 creates a position with 150 units of collateral, creating 100 synthetic tokens.
-          await financialContract.methods
-            .create({ rawValue: convertDecimals('150') }, { rawValue: convertDecimals('100') })
-            .send({ from: sponsor1 });
-          // sponsor2 creates a position with 1.75 units of collateral, creating 1 synthetic tokens.
-          await financialContract.methods
-            .create({ rawValue: convertDecimals('1.75') }, { rawValue: convertDecimals('1') })
-            .send({ from: sponsor2 });
+        describe('Agent correctly identifies liquidatable funding rates from perpetual contract', () => {
+          versionedIt([{ contractType: 'Perpetual', contractVersion: '2.0.1' }])(
+            'Can correctly detect invalid positions',
+            async () => {
+              // sponsor1 creates a position with 125 units of collateral, creating 100 synthetic tokens.
+              await financialContract.methods
+                .create({ rawValue: convertDecimals('125') }, { rawValue: convertDecimals('100') })
+                .send({ from: sponsor1 });
 
-          // the liquidator creates a position to have synthetic tokens.
-          await financialContract.methods
-            .create({ rawValue: convertDecimals('1000') }, { rawValue: convertDecimals('500') })
-            .send({ from: liquidator });
+              // sponsor2 creates a position with 150 units of collateral, creating 100 synthetic tokens.
+              await financialContract.methods
+                .create({ rawValue: convertDecimals('150') }, { rawValue: convertDecimals('100') })
+                .send({ from: sponsor2 });
 
-          await financialContractClient.update();
-          await financialContract.methods
-            .createLiquidation(
-              sponsor1,
-              { rawValue: '0' },
-              { rawValue: toWei('1.75') },
-              { rawValue: convertDecimals('100') },
-              unreachableDeadline,
-            )
-            .send({ from: liquidator });
+              // Both token sponsors should still have their positions with full collateral.
+              assert.equal(
+                (await financialContract.methods.getCollateral(sponsor1).call()).rawValue,
+                convertDecimals('125'),
+              );
+              assert.equal(
+                (await financialContract.methods.getCollateral(sponsor2).call()).rawValue,
+                convertDecimals('150'),
+              );
 
-          await financialContract.methods
-            .createLiquidation(
-              sponsor2,
-              { rawValue: '0' },
-              { rawValue: toWei('1.75') },
-              { rawValue: convertDecimals('1') },
-              unreachableDeadline,
-            )
-            .send({ from: liquidator });
+              // Start with a mocked price of 1 usd per token.
+              // This puts both sponsors over collateralized so no liquidations should occur.
+              priceFeedMock.setCurrentPrice(toWei('1'));
 
-          priceFeedMock.setHistoricalPrice(toWei('1.1'));
+              // ensure no findings are reported initially
+              assert.deepEqual(await handleBlock(), []);
 
-          await financialContractClient.update();
-          await priceFeedMock.update();
+              // Next, introduce some funding rate. Setting the funding rate multiplier to 1.04, results in modifying
+              // sponsor's debt. This becomes 100*1.04 = 104. All this debt, with a price of 1, both sponsors are
+              // still correctly capatalized with sponsor1 @ 125 / (104 * 1) = 1.202 & sponsor2 @ 150 / (104 * 1) = 1.44.
+              // So, if there is 150 collateral backing 105 token debt, with a collateral requirement of 1.2, then
+              // the price must be <= 150 / 1.2 / 105 = 1.19. Any price above 1.19 will cause the dispute to fail.
+              await setFundingRateAndAdvanceTime(toWei('0.000004'), contractCreator);
+              priceFeedMock.setCurrentPrice(toWei('1'));
+              await financialContractClient.update();
 
-          const testFindings = [];
-          const liquidations = financialContractClient.getUndisputedLiquidations();
+              // Note: no need to call `applyFundingRate()` on Perpetual contract because client should be able to use
+              // Multicall contract to simulate calling that and anticipating what the effective funding rate charge will be.
+              assert.equal(
+                financialContractClient.getLatestCumulativeFundingRateMultiplier().toString(),
+                toWei('1.04'),
+              );
+              assert.deepEqual(await handleBlock(), []);
 
-          const price = toBN(toWei('1.1'));
-          const scaledPrice = price
-            .mul(toBN(toWei('1')).add(toBN(toWei(crThreshold.toString()))))
-            .div(toBN(toWei('1')));
-          testFindings.push(createAlert(financialContractClient.financialContract, price, scaledPrice, liquidations[0])); // sponsor 1
-          testFindings.push(createAlert(financialContractClient.financialContract, price, scaledPrice, liquidations[1])); // sponsor 2
+              // If either the price increase, funding rate multiplier increase or the sponsors collateral decrease they
+              // will be at risk of being liquidated. Say that the funding rate has another 0.01 added to it. The cumulative
+              // funding rate will then be 1.04 * (1 + 0.000001 * 10000) = 1.0504. This will place sponsor1 underwater with
+              // a CR of 125 / (100 * 1.0504 * 1) = 1.19 (which is less than 1.2) and they should get liquidated by the bot.
+              await setFundingRateAndAdvanceTime(toWei('0.000001'), contractCreator);
+              await financialContractClient.update();
 
-          assert.deepEqual(await handleBlock(), testFindings);
+              assert.equal(
+                financialContractClient.getLatestCumulativeFundingRateMultiplier().toString(),
+                toWei('1.0504'),
+              );
+
+              const expectedAlerts = [];
+              financialContractClient.getAllPositions().filter(
+                // only sponsor1 should be liquadatable
+                (position) => position.sponsor === sponsor1,
+              ).forEach((position) => {
+                expectedAlerts.push(createAlert(financialContractClient, position, toWei('1')));
+              });
+
+              assert.deepEqual(await handleBlock(), expectedAlerts);
+
+              // Next, we can increase the price per token to force sponsor2 to become undercollateralized. At a price of 1.2
+              // sponsor2 will become just undercollateralized with the current cumulative funding rate multipler. Their
+              // CR can be found by: 150 / (100 * 1.0504 * 1.2) = 1.19  (which is less than 1.2). Sponsor 3 is still safe.
+              priceFeedMock.setCurrentPrice(toWei('1.2'));
+              expectedAlerts.pop();
+              financialContractClient.getAllPositions().filter(
+                // Both sponsor1 and sponsor2 should be liquidatable
+                (position) => position.sponsor === sponsor1 || position.sponsor === sponsor2,
+              ).forEach((position) => {
+                expectedAlerts.push(createAlert(financialContractClient, position, toWei('1.2')));
+              });
+
+              assert.deepEqual(await handleBlock(), expectedAlerts);
+            },
+          );
         });
       });
     });

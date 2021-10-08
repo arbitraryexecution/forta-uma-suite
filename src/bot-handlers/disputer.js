@@ -6,9 +6,13 @@ const contractData = require('./disputer-contract-data.json');
 const {
   umaEverestId,
 } = require('../../agent-config.json');
+
 const {
   initializeContracts,
 } = require('./initialization');
+
+// initialized data
+const initializeData = {};
 
 // web3 helpers
 const { toWei, toBN } = web3.utils;
@@ -54,11 +58,11 @@ const defaultConfig = {
   },
 };
 
-function provideHandleBlock(contracts) {
+function provideHandleBlock(data) {
   // eslint-disable-next-line no-unused-vars
   return async function handleBlock(blockEvent) {
     const findings = [];
-    const financialContracts = await contracts;
+    const financialContracts = await data.contracts;
     async function generateFindings(financialObject) {
       // grab things out of our financialObject
       const { financialContractClient } = financialObject;
@@ -119,8 +123,16 @@ function provideHandleBlock(contracts) {
   };
 }
 
+function provideInitialize(data) {
+  return async function initialize() {
+    // eslint-disable-next-line no-param-reassign
+    data.contracts = initializeContracts(contractData);
+  };
+}
+
 module.exports = {
+  initialize: provideInitialize(initializeData),
   provideHandleBlock,
-  handleBlock: provideHandleBlock(initializeContracts(contractData)),
+  handleBlock: provideHandleBlock(initializeData),
   createAlert,
 };
