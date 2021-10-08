@@ -40,7 +40,7 @@ function filterAndParseLogs(logs, address, iface, eventNames) {
 function extractArgs(args) {
   const strippedArgs = Object();
   Object.keys(args).forEach((k) => {
-    if (Number.isNaN(k)) { strippedArgs[k] = args[k].toString(); }
+    if (Number.isNaN(Number(k))) { strippedArgs[k] = args[k].toString(); }
   });
   return strippedArgs;
 }
