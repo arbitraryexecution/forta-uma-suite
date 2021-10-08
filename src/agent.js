@@ -5,7 +5,8 @@ const monitorMintCalls = require('./monitor-mint-calls/monitor-mint-calls');
 const optimisticOracle = require('./optimistic-oracle/optimistic-oracle');
 
 // block handlers
-// <empty>
+const liquidator = require('./bot-handlers/liquidator');
+const disputer = require('./bot-handlers/disputer');
 
 const txHandlers = [
   adminEvents,
@@ -15,6 +16,8 @@ const txHandlers = [
 ];
 
 const blockHandlers = [
+  liquidator,
+  disputer,
 ];
 
 // returns findings over all txHandler's handleTransaction functions
