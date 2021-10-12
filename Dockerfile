@@ -14,6 +14,5 @@ WORKDIR /app
 COPY ./src ./src
 COPY agent-config.json ./
 COPY package*.json ./
-COPY forta.config.json ./
 RUN npm ci --production
 CMD [ "npm", "run", "start:prod" ]
