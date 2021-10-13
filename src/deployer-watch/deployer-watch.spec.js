@@ -7,7 +7,9 @@ const {
 
 const addresses = require('./deployer-watch.json');
 const config = require('../../agent-config.json');
-const { handleTransaction } = require('./deployer-watch');
+const { provideInitialize, provideHandleTransaction } = require('./deployer-watch');
+
+const initializeData = {};
 
 const deployerAddress = addresses.Deployer.toLowerCase();
 const whitelistedAddress = addresses.Whitelist[0].toLowerCase();
@@ -22,6 +24,12 @@ function createTxEvent(transaction) {
 
 describe('watch deployer EOA', () => {
   describe('handleTransaction', () => {
+    let handleTransaction;
+    beforeEach(async () => {
+      await (provideInitialize(initializeData))();
+      handleTransaction = provideHandleTransaction(initializeData);
+    });
+
     it('returns empty findings if Deployer not involved', async () => {
       // build txEvent
       const txEvent = createTxEvent({

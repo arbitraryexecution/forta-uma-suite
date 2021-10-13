@@ -6,18 +6,9 @@ const {
 
 const { getAbi, getAddress } = require('@uma/contracts-node');
 
-// get the addresses for the voting contract and voting token contract for chain id 1 (eth mainnet)
-const CHAIN_ID = 1;
-const votingAddressPromise = getAddress('Voting', CHAIN_ID);
-const votingTokenAddressPromise = getAddress('VotingToken', CHAIN_ID);
-
-// get the abi for the voting token contract
-const votingTokenAbi = getAbi('VotingToken');
+const initializeData = {};
 
 const { umaEverestId } = require('../../agent-config.json');
-
-// create ethers interface object for the VotingToken.sol contract
-const iface = new ethers.utils.Interface(votingTokenAbi);
 
 // helper function to create alerts
 function createAlert(fromAddress, votingTokenAddress, transactionHash) {
@@ -37,50 +28,70 @@ function createAlert(fromAddress, votingTokenAddress, transactionHash) {
   });
 }
 
-async function handleTransaction(txEvent) {
-  const findings = [];
+function provideInitialize(data) {
+  return async function initialize() {
+    /* eslint-disable no-param-reassign */
+    // get the addresses for the voting contract and voting token contract
+    // for chain id 1 (eth mainnet)
+    const CHAIN_ID = 1;
+    data.votingAddress = await getAddress('Voting', CHAIN_ID);
+    data.votingTokenAddress = await getAddress('VotingToken', CHAIN_ID);
 
-  // retrieve the traces from the transactionEvent
-  const { traces } = txEvent;
+    // get the abi for the voting token contract
+    data.votingTokenAbi = getAbi('VotingToken');
 
-  const votingAddress = await votingAddressPromise;
-  const votingTokenAddress = await votingTokenAddressPromise;
+    // create ethers interface object for the VotingToken.sol contract
+    data.iface = new ethers.utils.Interface(data.votingTokenAbi);
+    /* eslint-enable no-param-reassign */
+  };
+}
 
-  // if we have received trace data, process the transactions within
-  if (traces && traces.length) {
-    traces.forEach((trace) => {
-      // use a nested destructor to retrieve the addresses, data, and value for the method call
-      const {
-        action:
-        {
-          from: fromAddress,
-          to: toAddress,
-          input: data,
-          value,
-        },
-        transactionHash,
-      } = trace;
+function provideHandleTransaction(data) {
+  return async function handleTransaction(txEvent) {
+    const findings = [];
 
-      // check if the call is to the VotingToken contract
-      if (toAddress === votingTokenAddress.toLowerCase()) {
-        // check if the call is for the mint() method
-        const transactionDescription = iface.parseTransaction({ data, value });
+    // retrieve the traces from the transactionEvent
+    const { traces } = txEvent;
 
-        if (transactionDescription.name === 'mint') {
-          // check if the call originated from the Voting contract
-          if (fromAddress !== votingAddress.toLowerCase()) {
-            // create alert
-            findings.push(createAlert(fromAddress, votingTokenAddress, transactionHash));
+    // if we have received trace data, process the transactions within
+    if (traces && traces.length) {
+      traces.forEach((trace) => {
+        // use a nested destructor to retrieve the addresses, input, and value for the method call
+        const {
+          action:
+          {
+            from: fromAddress,
+            to: toAddress,
+            input,
+            value,
+          },
+          transactionHash,
+        } = trace;
+
+        // check if the call is to the VotingToken contract
+        if (toAddress === data.votingTokenAddress.toLowerCase()) {
+          // check if the call is for the mint() method
+          const transactionDescription = data.iface.parseTransaction({ data: input, value });
+
+          if (transactionDescription.name === 'mint') {
+            // check if the call originated from the Voting contract
+            if (fromAddress !== data.votingAddress.toLowerCase()) {
+              // create alert
+              findings.push(createAlert(fromAddress, data.votingTokenAddress, transactionHash));
+            }
           }
         }
-      }
-    });
-  }
-  return findings;
+      });
+    }
+    return findings;
+  };
 }
 
 // exports
 module.exports = {
-  handleTransaction,
+  provideInitialize,
+  initialize: provideInitialize(initializeData),
+  provideHandleTransaction,
+  handleTransaction: provideHandleTransaction(initializeData),
   createAlert,
 };
