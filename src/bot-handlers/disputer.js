@@ -58,74 +58,70 @@ const defaultConfig = {
   },
 };
 
+async function generateFindings(financialObject) {
+  // grab things out of our financialObject
+  const { financialContractClient, priceFeed } = financialObject;
+  // update client and price feed
+  await Promise.all([financialContractClient.update(), priceFeed.update()]);
+
+  // get the latest disputable liquidations from the client.
+  const undisputedLiquidations = financialContractClient.getUndisputedLiquidations();
+  return (await Promise.all(
+    undisputedLiquidations.map(async (liquidation) => {
+      const findings = [];
+      const liquidationTime = parseInt(liquidation.liquidationTime.toString(), 10);
+      const lookback = priceFeed.getLookback();
+      const historicalLookbackWindow = priceFeed.getLastUpdateTime() - lookback;
+
+      if (liquidationTime < historicalLookbackWindow) {
+        // Liquidation time before earliest price feed historical timestamp
+        return findings;
+      }
+      // get the historic price at the liquidation time.
+      let price;
+      try {
+        price = await priceFeed.getHistoricalPrice(liquidationTime);
+      } catch (error) {
+        console.error('Could not get historical price');
+      }
+      if (!price) return findings;
+
+      // price is available, use it to determine if the liquidation is disputable
+      const scaledPrice = price
+        .mul(toBN(toWei('1')).add(toBN(toWei(defaultConfig.crThreshold.value.toString()))))
+        .div(toBN(toWei('1')));
+
+      const timeAndDelay = liquidationTime + defaultConfig.disputeDelay.value;
+      if (
+        scaledPrice
+        && financialContractClient.isDisputable(liquidation, scaledPrice)
+        && financialContractClient.getLastUpdateTime() >= timeAndDelay
+      ) {
+        // here is where the finding should be
+        findings.push(createAlert(financialContractClient.financialContract,
+          price, scaledPrice, liquidation));
+      }
+      return findings;
+    }),
+  )).flat();
+}
+
 function provideHandleBlock(data) {
   // eslint-disable-next-line no-unused-vars
   return async function handleBlock(blockEvent) {
-    const findings = [];
-    const financialContracts = await data.contracts;
-    async function generateFindings(financialObject) {
-      // grab things out of our financialObject
-      const { financialContractClient, priceFeed } = financialObject;
-      // update client and price feed
-      await Promise.all([financialContractClient.update(), priceFeed.update()]);
+    const financialContracts = data.contracts;
 
-      // get the latest disputable liquidations from the client.
-      const undisputedLiquidations = financialContractClient.getUndisputedLiquidations();
-      // eslint-disable-next-line no-unused-vars
-      const disputableLiquidationsWithPrices = (
-        await Promise.all(
-          undisputedLiquidations.map(async (liquidation) => {
-            const liquidationTime = parseInt(liquidation.liquidationTime.toString(), 10);
-            const lookback = priceFeed.getLookback();
-            const historicalLookbackWindow = priceFeed.getLastUpdateTime() - lookback;
-
-            if (liquidationTime < historicalLookbackWindow) {
-              // Liquidation time before earliest price feed historical timestamp
-              return null;
-            }
-            // get the historic price at the liquidation time.
-            let price;
-            try {
-              price = await priceFeed.getHistoricalPrice(liquidationTime);
-            } catch (error) {
-              console.error('Could not get historical price');
-            }
-            if (!price) return null;
-
-            // price is available, use it to determine if the liquidation is disputable
-            const scaledPrice = price
-              .mul(toBN(toWei('1')).add(toBN(toWei(defaultConfig.crThreshold.value.toString()))))
-              .div(toBN(toWei('1')));
-
-            const timeAndDelay = liquidationTime + defaultConfig.disputeDelay.value;
-            if (
-              scaledPrice
-              && financialContractClient.isDisputable(liquidation, scaledPrice)
-              && financialContractClient.getLastUpdateTime() >= timeAndDelay
-            ) {
-              // here is where the finding should be
-              findings.push(createAlert(financialContractClient.financialContract,
-                price, scaledPrice, liquidation));
-            }
-            return null;
-          }),
-        )
-      ).filter((liquidation) => liquidation !== null);
-    }
-
-    // generate findings for each contract and catch exceptions so Promise.all does not bail early
-    await Promise.all(financialContracts.map(
-      (contract) => generateFindings(contract).catch((e) => console.error(e)),
-    ));
-
-    return findings;
+    // generate findings for each contract and flatten the return
+    return (await Promise.all(financialContracts.map(
+      (contract) => generateFindings(contract),
+    ))).flat();
   };
 }
 
 function provideInitialize(data) {
   return async function initialize() {
     // eslint-disable-next-line no-param-reassign
-    data.contracts = initializeContracts(contractData);
+    data.contracts = await initializeContracts(contractData);
   };
 }
 

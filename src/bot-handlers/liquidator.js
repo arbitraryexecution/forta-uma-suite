@@ -69,7 +69,7 @@ function provideHandleBlock(data) {
 
     // iterate through each financial contract and check if it is liquidatable
     // awaiting contracts promise is a no op after it resolves the first time
-    const promises = (await data.contracts).map((contract) => checkIfLiquidatable(contract));
+    const promises = data.contracts.map((contract) => checkIfLiquidatable(contract));
 
     return (await Promise.all(promises)).flat();
   };
@@ -78,7 +78,7 @@ function provideHandleBlock(data) {
 function provideInitialize(data) {
   return async function initialize() {
     // eslint-disable-next-line no-param-reassign
-    data.contracts = initializeContracts(contractData);
+    data.contracts = await initializeContracts(contractData);
   };
 }
 
