@@ -7,29 +7,31 @@ const initializeData = {};
 
 function provideInitialize(data) {
   return async function initialize() {
-    // eslint-disable-next-line no-param-reassign
+    /* eslint-disable no-param-reassign */
     data.deployerAddress = addresses.Deployer.toLowerCase();
 
     // re-format the whitelist to simplify the logic for checking transactions
     // also remove checksums
-    // eslint-disable-next-line no-param-reassign
     data.whitelist = {};
     addresses.Whitelist.forEach((a) => {
-      // eslint-disable-next-line no-param-reassign
       data.whitelist[a.toLowerCase()] = true;
     });
+    /* eslint-enable no-param-reassign */
   };
 }
 
 function provideHandleTransaction(data) {
   return async function handleTransaction(txEvent) {
+    if (!data) throw new Error('handler called before initialization');
+    const { deployerAddress, whitelist } = data;
+
     const findings = [];
     const txAddresses = txEvent.addresses;
     const { to, from } = txEvent;
 
     // the Deployer address is critical to this agent, so it should be in deployer-watch.json
     // in case it gets removed, check and warn
-    if (!data.deployerAddress) {
+    if (!deployerAddress) {
       console.error('Please add Deployer contract address to deployer-watch.json');
       return findings;
     }
@@ -38,7 +40,7 @@ function provideHandleTransaction(data) {
     // txEvent.addresses includes txEvent.to and txEvent.from
     // uses txEvent.addresses instead of explicitly checking against txEvent.to and txEvent.from
     // to also catch scenarios where Deployer is involved but is not the initiator
-    if (txAddresses[data.deployerAddress]) {
+    if (txAddresses[deployerAddress]) {
       findings.push(
         Finding.fromObject({
           name: 'UMA Deployer Watch',
@@ -56,7 +58,7 @@ function provideHandleTransaction(data) {
       );
 
       // high severity alert if Deployer interacts with an abnormal address
-      if (!data.whitelist[to]) {
+      if (!whitelist[to]) {
         findings.push(
           Finding.fromObject({
             name: 'UMA Deployer Watch - Unexpected Transaction',

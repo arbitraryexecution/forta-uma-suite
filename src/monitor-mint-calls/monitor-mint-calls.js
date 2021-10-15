@@ -48,6 +48,9 @@ function provideInitialize(data) {
 
 function provideHandleTransaction(data) {
   return async function handleTransaction(txEvent) {
+    if (!data) throw new Error('handler called before initialization');
+    const { votingTokenAddress, iface, votingAddress } = data;
+
     const findings = [];
 
     // retrieve the traces from the transactionEvent
@@ -69,15 +72,15 @@ function provideHandleTransaction(data) {
         } = trace;
 
         // check if the call is to the VotingToken contract
-        if (toAddress === data.votingTokenAddress.toLowerCase()) {
+        if (toAddress === votingTokenAddress.toLowerCase()) {
           // check if the call is for the mint() method
-          const transactionDescription = data.iface.parseTransaction({ data: input, value });
+          const transactionDescription = iface.parseTransaction({ data: input, value });
 
           if (transactionDescription.name === 'mint') {
             // check if the call originated from the Voting contract
-            if (fromAddress !== data.votingAddress.toLowerCase()) {
+            if (fromAddress !== votingAddress.toLowerCase()) {
               // create alert
-              findings.push(createAlert(fromAddress, data.votingTokenAddress, transactionHash));
+              findings.push(createAlert(fromAddress, votingTokenAddress, transactionHash));
             }
           }
         }
