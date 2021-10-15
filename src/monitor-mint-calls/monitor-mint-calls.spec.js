@@ -7,7 +7,9 @@ const data = {};
 describe('UMA Token mint() call agent', () => {
   describe('UMA mint() method call monitoring', () => {
     let handleTransaction;
-    let iface, votingAddress, votingTokenAddress;
+    let iface;
+    let votingAddress;
+    let votingTokenAddress;
 
     beforeEach(async () => {
       await (provideInitialize(data))();
