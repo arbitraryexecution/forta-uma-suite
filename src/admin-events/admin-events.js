@@ -34,20 +34,22 @@ function filterAndParseLogs(logs, address, iface, eventNames) {
   return parsedLogs;
 }
 
-// Helper function that converts the args so they can be in the metadata
-// Removed fields that are not named.  They have numeric names in Object.keys()
-// Converts all values to strings so that BigNumbers are readable
-function extractArgs(args) {
-  const strippedArgs = Object();
+// helper function that identifies key strings in the args array obtained from log parsing
+// these key-value pairs will be added to the metadata as event args
+// all values are converted to strings so that BigNumbers are readable
+function extractEventArgs(args) {
+  const eventArgs = {};
   Object.keys(args).forEach((key) => {
-    if (Number.isNaN(Number(key))) strippedArgs[key] = args[key].toString();
+    if (Number.isNaN(Number(key))) {
+      eventArgs[key] = args[key].toString();
+    }
   });
-  return strippedArgs;
+  return eventArgs;
 }
 
 // helper function to create alerts
 function createAlert(eventName, contractName, contractAddress, eventType, eventSeverity, args) {
-  const strippedArgs = extractArgs(args);
+  const eventArgs = extractEventArgs(args);
   return Finding.fromObject({
     name: 'UMA Admin Event',
     description: `The ${eventName} event was emitted by the ${contractName} contract`,
@@ -60,7 +62,7 @@ function createAlert(eventName, contractName, contractAddress, eventType, eventS
       contractName,
       contractAddress,
       eventName,
-      strippedArgs,
+      eventArgs,
     },
   });
 }

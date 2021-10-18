@@ -1,6 +1,8 @@
 const ethers = require('ethers');
 const { getAddress } = require('@uma/contracts-node');
-const { Finding, createTransactionEvent } = require('forta-agent');
+const {
+  Finding, FindingType, FindingSeverity, createTransactionEvent,
+} = require('forta-agent');
 
 const { provideHandleTransaction, provideInitialize } = require('./admin-events');
 
@@ -106,15 +108,15 @@ describe('admin event monitoring', () => {
         name: 'UMA Admin Event',
         description: 'The VoteCommitted event was emitted by the Voting contract',
         alertId: 'AE-UMA-ADMIN-EVENT',
-        type: 4,
-        severity: 2,
+        type: FindingType.Info,
+        severity: FindingSeverity.Low,
         everestId: '0x9ed51155fa709f1bc3b26b8fec03df7010177362',
         protocol: 'uma',
         metadata: {
           contractAddress: '0x8b1631ab830d11531ae83725fda4d86012eccd77',
           contractName: 'Voting',
           eventName: 'VoteCommitted',
-          strippedArgs: {
+          eventArgs: {
             ancillaryData: '0x',
             identifier: '0x0000000000000000000000000000000000000000000000000000000000000000',
             roundId: '0',
