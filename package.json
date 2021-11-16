@@ -15,7 +15,9 @@
     "disable": "forta-agent disable",
     "enable": "forta-agent enable",
     "keyfile": "forta-agent keyfile",
-    "test": "mocha ./src/bot-handlers/tests/*-test.js && jest"
+    "test": "mocha ./src/bot-handlers/tests/*-test.js && jest",
+    "test:docker": "docker build -t testbuild .",
+    "posttest:docker": "docker run testbuild"
   },
   "dependencies": {
     "@uma/common": "^2.10.0",
