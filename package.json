@@ -11,6 +11,10 @@
     "range": "forta-agent run --range",
     "file": "forta-agent run --file",
     "publish": "forta-agent publish",
+    "push": "forta-agent push",
+    "disable": "forta-agent disable",
+    "enable": "forta-agent enable",
+    "keyfile": "forta-agent keyfile",
     "test": "mocha ./src/bot-handlers/tests/*-test.js && jest"
   },
   "dependencies": {
