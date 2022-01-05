@@ -76,7 +76,8 @@ function provideHandleTransaction(data) {
           // check if the call is for the mint() method
           const transactionDescription = iface.parseTransaction({ data: input, value });
 
-          if (transactionDescription.name === 'mint') {
+          // parseTransaction may return null
+          if (transactionDescription?.name === 'mint') {
             // check if the call originated from the Voting contract
             if (fromAddress !== votingAddress.toLowerCase()) {
               // create alert

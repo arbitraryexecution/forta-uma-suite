@@ -158,7 +158,7 @@ function provideInitialize(data) {
 function provideHandleTransaction(data) {
   return async function handleTransaction(txEvent) {
     const { optimisticOracle, getPrice: getPriceFunc } = data;
-    if (!optimisticOracle || !getPrice) {
+    if (!optimisticOracle || !getPriceFunc) {
       throw new Error('handleTransaction was called before initialization');
     }
 

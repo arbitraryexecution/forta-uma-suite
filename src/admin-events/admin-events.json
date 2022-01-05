@@ -10,8 +10,6 @@
   "Governor" : {
     "NewProposal" : {"type" : "Info", "severity" : "Low"},
     "ProposalExecuted" : {"type" : "Info", "severity" : "Low"},
-    "AddedSharedMember" : {"type" : "Suspicious", "severity" : "Low"},
-    "RemovedSharedMember" : {"type" : "Suspicious", "severity" : "Low"},
     "ResetExclusiveMember" : {"type" : "Suspicious", "severity" : "High"}
   }
 }
