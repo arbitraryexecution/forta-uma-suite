@@ -52,7 +52,7 @@ async function checkIfLiquidatable({ financialContractClient, priceFeed }) {
 
   // grab current price
   const price = await priceFeed.getCurrentPrice();
-
+  
   // get liquidatable positions
   // eslint-disable-next-line max-len
   const liquidatablePositions = await financialContractClient.getUnderCollateralizedPositions(price);
