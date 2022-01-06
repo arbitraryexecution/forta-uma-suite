@@ -1,5 +1,5 @@
 {
-  "name": "forta-uma-suite",
+  "name": "forta-uma-disputor-bot",
   "version": "0.0.1",
   "description": "Collection of scan agent handlers that monitor UMA",
   "scripts": {
@@ -15,7 +15,7 @@
     "disable": "forta-agent disable",
     "enable": "forta-agent enable",
     "keyfile": "forta-agent keyfile",
-    "test": "mocha ./src/bot-handlers/tests/*-test.js && jest",
+    "test": "mocha ./src/*spec.js",
     "test:docker": "docker build -t testbuild .",
     "posttest:docker": "docker run testbuild"
   },
