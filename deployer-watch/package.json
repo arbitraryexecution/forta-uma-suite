@@ -1,0 +1,49 @@
+{
+  "name": "forta-uma-deployer-watch",
+  "version": "0.0.1",
+  "description": "Agent that monitors the UMA protocol for transactions from the deployer address",
+  "scripts": {
+    "start": "npm run start:dev",
+    "start:dev": "nodemon --watch src --watch forta.config.json -e js,json --exec 'forta-agent run'",
+    "start:prod": "forta-agent run --prod",
+    "tx": "forta-agent run --tx",
+    "block": "forta-agent run --block",
+    "range": "forta-agent run --range",
+    "file": "forta-agent run --file",
+    "publish": "forta-agent publish",
+    "push": "forta-agent push",
+    "disable": "forta-agent disable",
+    "enable": "forta-agent enable",
+    "keyfile": "forta-agent keyfile",
+    "test": "jest",
+    "test:docker": "docker build -t testbuild .",
+    "posttest:docker": "docker run testbuild"
+  },
+  "dependencies": {
+    "@uma/common": "^2.10.0",
+    "@uma/contracts-node": "^0.1.4",
+    "@uma/contracts-node-0-1-0": "npm:@uma/contracts-node@^0.1.0",
+    "@uma/core": "^2.11.0",
+    "@uma/financial-templates-lib": "^2.10.0",
+    "bignumber.js": "^9.0.1",
+    "ethers": "^5.4.6",
+    "forta-agent": "^0.0.29",
+    "web3": "^1.6.0"
+  },
+  "devDependencies": {
+    "@eth-optimism/hardhat-ovm": "^0.2.3",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.6",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "chai": "^4.3.4",
+    "eslint": "^7.32.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.25.1",
+    "hardhat": "^2.6.4",
+    "jest": "^27.2.5",
+    "mocha": "^9.1.2",
+    "nodemon": "^2.0.13",
+    "sinon": "^11.1.2",
+    "winston": "^3.3.3"
+  }
+}
