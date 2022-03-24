@@ -1,6 +1,6 @@
 {
   "name": "forta-uma-deployer-watch",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Agent that monitors the UMA protocol for transactions from the deployer address",
   "scripts": {
     "start": "npm run start:dev",
