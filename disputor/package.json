@@ -1,6 +1,6 @@
 {
   "name": "forta-uma-disputor-bot",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Agent that monitors the UMA protocol for dispute opportunities",
   "scripts": {
     "start": "npm run start:dev",
@@ -27,7 +27,7 @@
     "@uma/financial-templates-lib": "^2.10.0",
     "bignumber.js": "^9.0.1",
     "ethers": "^5.4.6",
-    "forta-agent": "^0.0.29",
+    "forta-agent": "^0.0.40",
     "web3": "^1.6.0"
   },
   "devDependencies": {
