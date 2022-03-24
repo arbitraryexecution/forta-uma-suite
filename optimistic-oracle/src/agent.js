@@ -1,8 +1,7 @@
-const ethers = require('ethers');
 const BigNumber = require('bignumber.js');
 const Web3 = require('web3');
 const {
-  Finding, FindingSeverity, FindingType, getJsonRpcUrl,
+  ethers, Finding, FindingSeverity, FindingType, getJsonRpcUrl,
 } = require('forta-agent');
 
 // contract ABIs and network addresses
