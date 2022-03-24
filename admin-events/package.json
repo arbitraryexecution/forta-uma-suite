@@ -1,6 +1,6 @@
 {
   "name": "forta-uma-admin-events",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Agent that monitors the UMA protocol for administrative events on contracts",
   "scripts": {
     "start": "npm run start:dev",
