@@ -6,7 +6,6 @@ const {
 } = require('forta-agent');
 
 const addresses = require('./deployer-watch.json');
-const config = require('../agent-config.json');
 const { provideInitialize, provideHandleTransaction } = require('./agent');
 
 const initializeData = {};
@@ -57,7 +56,6 @@ describe('watch deployer EOA', () => {
           alertId: 'AE-UMA-DEPLOYER-TX',
           severity: FindingSeverity.Low,
           type: FindingType.Unknown,
-          everestId: config.umaEverestId,
           protocol: 'uma',
           metadata: {
             to: whitelistedAddress,
@@ -81,7 +79,6 @@ describe('watch deployer EOA', () => {
           alertId: 'AE-UMA-DEPLOYER-TX',
           severity: FindingSeverity.Low,
           type: FindingType.Unknown,
-          everestId: config.umaEverestId,
           protocol: 'uma',
           metadata: {
             to: '0xFAKEADDRESS',
@@ -95,7 +92,6 @@ describe('watch deployer EOA', () => {
           alertId: 'AE-UMA-DEPLOYER-WHITELIST',
           severity: FindingSeverity.High,
           type: FindingType.Suspicious,
-          everestId: config.umaEverestId,
           protocol: 'uma',
           metadata: {
             to: '0xFAKEADDRESS',
