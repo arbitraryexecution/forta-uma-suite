@@ -1,14 +1,10 @@
-const ethers = require('ethers');
-
 const {
-  Finding, FindingSeverity, FindingType,
+  ethers, Finding, FindingSeverity, FindingType,
 } = require('forta-agent');
 
 const { getAbi, getAddress } = require('@uma/contracts-node');
 
 const initializeData = {};
-
-const { umaEverestId } = require('../agent-config.json');
 
 // helper function to create alerts
 function createAlert(fromAddress, votingTokenAddress, transactionHash) {
@@ -18,7 +14,6 @@ function createAlert(fromAddress, votingTokenAddress, transactionHash) {
     alertId: 'AE-UMA-UNAUTHORIZED-MINT',
     severity: FindingSeverity.Critical,
     type: FindingType.Exploit,
-    everestId: umaEverestId,
     protocol: 'uma',
     metadata: {
       votingTokenAddress,
