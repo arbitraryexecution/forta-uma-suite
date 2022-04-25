@@ -2,7 +2,7 @@
    Contains helper functions for encoding log data and receipts.
 */
 
-const ethers = require('ethers');
+const { ethers } = require('forta-agent');
 
 // constant values
 const ZERO_ADDRESS = ethers.constants.AddressZero;

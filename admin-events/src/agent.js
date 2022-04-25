@@ -1,9 +1,7 @@
-const { Finding, FindingSeverity, FindingType } = require('forta-agent');
+const { ethers, Finding, FindingSeverity, FindingType } = require('forta-agent');
 const { getAbi, getAddress } = require('@uma/contracts-node');
-const ethers = require('ethers');
 
 // load config files
-const { umaEverestId } = require('../agent-config.json');
 const adminEvents = require('./admin-events.json');
 
 // Stores information about each contract
@@ -56,7 +54,6 @@ function createAlert(eventName, contractName, contractAddress, eventType, eventS
     alertId: 'AE-UMA-ADMIN-EVENT',
     type: FindingType[eventType],
     severity: FindingSeverity[eventSeverity],
-    everestId: umaEverestId,
     protocol: 'uma',
     metadata: {
       contractName,

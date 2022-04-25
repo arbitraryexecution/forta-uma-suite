@@ -4,10 +4,6 @@ const web3 = require('web3');
 const contractData = require('./disputer-contract-data.json');
 
 const {
-  umaEverestId,
-} = require('../agent-config.json');
-
-const {
   initializeContracts,
 } = require('./initialization');
 
@@ -25,7 +21,6 @@ function createAlert(financialContract, price, scaledPrice, liquidation) {
     protocol: 'uma',
     severity: FindingSeverity.Medium,
     type: FindingType.Info,
-    everestId: umaEverestId,
     metadata: {
       financialContract: financialContract._address,
       price: price.toString(),

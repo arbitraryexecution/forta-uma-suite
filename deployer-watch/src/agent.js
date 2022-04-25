@@ -1,7 +1,6 @@
 const { Finding, FindingSeverity, FindingType } = require('forta-agent');
 
 const addresses = require('./deployer-watch.json');
-const config = require('../agent-config.json');
 
 const initializeData = {};
 
@@ -48,7 +47,6 @@ function provideHandleTransaction(data) {
           alertId: 'AE-UMA-DEPLOYER-TX',
           severity: FindingSeverity.Low,
           type: FindingType.Unknown,
-          everestId: config.umaEverestId,
           protocol: 'uma',
           metadata: {
             to,
@@ -66,7 +64,6 @@ function provideHandleTransaction(data) {
             alertId: 'AE-UMA-DEPLOYER-WHITELIST',
             severity: FindingSeverity.High,
             type: FindingType.Suspicious,
-            everestId: config.umaEverestId,
             protocol: 'uma',
             metadata: {
               to,

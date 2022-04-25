@@ -7,10 +7,6 @@ const {
 const contractData = require('./liquidator-contract-data.json');
 
 const {
-  umaEverestId,
-} = require('../agent-config.json');
-
-const {
   initializeContracts, checkIsExpiredOrShutdown,
 } = require('./initialization');
 
@@ -27,7 +23,6 @@ function createAlert(financialContractClient, position, price) {
     alertId: 'AE-UMA-LIQUIDATABLE-POSITION',
     severity: FindingSeverity.Medium,
     type: FindingType.Info,
-    everestId: umaEverestId,
     metadata: {
       financialContract: financialContractClient._address,
       ...position,
